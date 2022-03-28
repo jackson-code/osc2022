@@ -1,6 +1,5 @@
 #include "uart.h"
 #include "shell.h"
-#include "mailbox.h"
 
 /*
 unsigned long __stack_chk_guard;
@@ -23,14 +22,9 @@ void main()
     uart_flush();    
     uart_printf("uart init");
     
-    int c;
-    uart_printf("c = %d", c);
+    //int c;
+    //uart_printf("c = %d", c);
 
-    // print raspi revision
-    mailbox_get_board_revision();
-    // print memory base addr and size
-    mailbox_get_arm_memory();
-    
     char cmd[MAXCMD]; 
     // echo everything back
     while(1) {  

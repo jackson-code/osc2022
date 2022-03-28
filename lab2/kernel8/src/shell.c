@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "mailbox.h"
 #include "my_string.h"
 #include "command.h"
 #include "cpio.h"
@@ -27,6 +28,7 @@ void shell_execute(char *cmd)
 		uart_printf("help:\t print this help menu");
 		uart_printf("hello:\t print Hello World!");
 		uart_printf("reboot:\t reboot the device");
+		uart_printf("boardinfo:\t print the raspi revision & memory base addr and size");
 		uart_printf("ls:\t list all file (parse the .cpio)");
 		uart_printf("cat:\t print file content (parse the .cpio)");
 		uart_printf("alloc:\t test the function simple_alloc()");
@@ -34,11 +36,17 @@ void shell_execute(char *cmd)
 		uart_printf("dt_info:\t test the function dt_info()");
 	}
 	else if (!str_cmp(cmd, "hello")) {
-	    uart_printf("I'm a kernel8 with slef-relocatted bootloader 8888");
+	    uart_printf("I'm kernel8");
 	}
 	else if (!str_cmp(cmd, "reboot")) {
 	    uart_printf("rebooting...");
 	    reset(150);
+	}
+	else if (!str_cmp(cmd, "boardinfo")) {    
+		// print raspi revision
+		mailbox_get_board_revision();
+		// print memory base addr and size
+		mailbox_get_arm_memory();
 	}
 	else if (!str_cmp(cmd, "ls")) {
 		cpio_list();	
