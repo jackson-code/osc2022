@@ -15,7 +15,7 @@ void load_user_program()
 		// set stack pointer
 		asm volatile("ldr	x1, =0x20000	\n");
 		asm volatile("msr	sp_el0, x1		\n");
-		// set return address
+		// set return address, return to the user.S
 		asm volatile("msr	elr_el1, %0		\n"::"r"(file_addr));
 		asm volatile("eret\n");
 	}

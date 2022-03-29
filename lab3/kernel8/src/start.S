@@ -28,16 +28,10 @@ clear_bss:
 	bl 		main	
 	
 
-
-
-
 from_el2_to_el1:
-	// EL1 uses aarch64
-    mov 	x0, (1 << 31) 		
+    mov 	x0, (1 << 31) 		// EL1 uses aarch64
     msr 	hcr_el2, x0			// write Xn to the system register(Hypervisor Configuration Register).
-    
-    // EL1h (SPSel = 1) with interrupt disabled
-    mov 	x0, 0x3c5 			
+    mov 	x0, 0x3c5 			// EL1h (SPSel = 1) with interrupt disabled	
     msr 	spsr_el2, x0
     msr 	elr_el2, lr
     eret 						// return to EL1
