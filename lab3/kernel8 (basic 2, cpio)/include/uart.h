@@ -1,3 +1,10 @@
+#ifndef UART_H
+#define UART_H
+
+#include "gpio.h"
+#include "address.h"
+#include "convert.h"
+
 void	uart_init();
 void	uart_flush();
 void	uart_send(unsigned int c);
@@ -10,3 +17,5 @@ void 	uart_get_string(char *s, int max_length);
 void 	uart_puts_bySize(char *s, int size);
 void 	uart_puts(char *s);
 void	uart_put_int(unsigned long num);
+
+#endif

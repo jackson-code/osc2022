@@ -1,20 +1,4 @@
-/* ref: BCM2837-ARM-Peripherals */
 #include "uart.h"
-
-// mini UART registers
-// ch 2.2.2
-#define AUX_ENB 				((volatile unsigned int*)(MMIO_BASE+0x00215004))
-#define AUX_MU_IO_REG			((volatile unsigned int*)(MMIO_BASE+0x00215040))
-#define AUX_MU_IER_REG			((volatile unsigned int*)(MMIO_BASE+0x00215044))
-#define AUX_MU_IIR_REG			((volatile unsigned int*)(MMIO_BASE+0x00215048))
-#define AUX_MU_LCR_REG  		((volatile unsigned int*)(MMIO_BASE+0x0021504C))
-#define AUX_MU_MCR_REG  		((volatile unsigned int*)(MMIO_BASE+0x00215050))
-#define AUX_MU_LSR_REG			((volatile unsigned int*)(MMIO_BASE+0x00215054))
-#define AUX_MU_MSR_REG			((volatile unsigned int*)(MMIO_BASE+0x00215058))
-#define AUX_MU_SCRATCH_REG  	((volatile unsigned int*)(MMIO_BASE+0x0021505C))
-#define AUX_MU_CNTL_REG			((volatile unsigned int*)(MMIO_BASE+0x00215060))
-#define AUX_MU_STAT_REG			((volatile unsigned int*)(MMIO_BASE+0x00215064))
-#define AUX_MU_BAUD_REG			((volatile unsigned int*)(MMIO_BASE+0x00215068))
 
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
@@ -58,6 +42,10 @@ void uart_init()
     
     
     *AUX_MU_CNTL_REG = 3;     	// enable tx, rx
+    
+	read_buf_start = read_buf_end = 0;
+	write_buf_start = write_buf_end = 0;
+	enable_uart_interrupt();
 }
 
 void uart_flush()
@@ -231,6 +219,78 @@ void uart_puts_bySize(char *s, int size){
 
 
 
+/******************************************/
+/*                  irq                   */
+/******************************************/
+
+void enable_uart_interrupt() { *ENB_IRQS1 = AUX_IRQ; }
+void disable_uart_interrupt() { *DISABLE_IRQS1 = AUX_IRQ; }		// all interrupts remain asserted until disabled or the interrupt source is cleared.
+void assert_transmit_interrupt() { *AUX_MU_IER_REG |= 0x2; }		// Enable transmit interrupts
+void clear_transmit_interrupt() { *AUX_MU_IER_REG &= ~(0x2); }		// Disable transmit interrupts
+
+void uart_handler()
+{
+	disable_uart_interrupt();
+	
+	// decide interrupt status (p13)
+	int read = (*AUX_MU_IIR_REG & 0x4);		// Receiver holds valid byte
+	int write = (*AUX_MU_IIR_REG & 0x2);		// Transmit holding register empty
+	int no_irq = (*AUX_MU_IIR_REG & 0x6);
+	
+	if (read) {
+	    char c = (char)(*AUX_MU_IO_REG);
+    	read_buf[read_buf_end++] = c;
+    	if (read_buf_end == MAX_BUFFER_LEN) 
+    		read_buf_end = 0;
+	}
+	else if (write) {
+	    while (*AUX_MU_LSR_REG & 0x20) {					// the transmit FIFO can accept at least one byte
+			if (write_buf_start == write_buf_end) {
+				clear_transmit_interrupt();				// no stuff to write, disable transmit interrupts
+				break;
+			}
+			char c = write_buf[write_buf_start++];
+			*AUX_MU_IO_REG = c;
+			if (write_buf_start == MAX_BUFFER_LEN) 
+				write_buf_start = 0;
+		}
+	}
+	else if(no_irq) {
+	}
+	
+	enable_uart_interrupt();
+}
 
 
+char uart_async_getc() {
+	// wait until there are new data
+	while (read_buf_start == read_buf_end) {
+		asm volatile("nop");
+	}
+	char c = read_buf[read_buf_start++];
+	if (read_buf_start == MAX_BUFFER_LEN) read_buf_start = 0;
+	// '\r' => '\n'
+	return c == '\r' ? '\n' : c;
+}
+
+void uart_async_puts(char *str) {
+	for (int i = 0; str[i]; i++) {
+		if (str[i] == '\r') write_buf[write_buf_end++] = '\n';
+		write_buf[write_buf_end++] = str[i];
+		if (write_buf_end == MAX_BUFFER_LEN) write_buf_end = 0;
+	}
+	//uart_puts(write_buf);
+	assert_transmit_interrupt();
+}
+
+void test_uart_async(){
+	/*  need time */
+    int reg=1500;
+    while ( reg-- )
+    { 
+        asm volatile("nop"); 
+    }
+
+	uart_async_puts("test test");
+}
 
