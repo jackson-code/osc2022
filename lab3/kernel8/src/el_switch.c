@@ -1,7 +1,7 @@
 #include "cpio.h"
 #include "uart.h"
 
-void load_user_program()
+void el_user_start()
 {
 	char *file_addr = cpio_get_addr("user.S");
 	uart_puts("APP address : ");
@@ -10,7 +10,7 @@ void load_user_program()
 	if	(*file_addr != -1)
 	{
 		uart_puts("switch EL1 to EL0...");
-		asm volatile("mov	x0, 0x3c0		\n");
+		asm volatile("mov	x0, 0x3c0		\n");		// 0 means using sp_el0
 		asm volatile("msr	spsr_el1, x0	\n");
 		// set stack pointer
 		asm volatile("ldr	x1, =0x20000	\n");

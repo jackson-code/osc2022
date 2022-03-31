@@ -9,11 +9,11 @@ void default_exception_handler()
 	asm volatile("mrs	%0, esr_el1		\n":"=r"(esr_el1_):);
 	
 	uart_puts("-------------EL1--------------");
-	uart_puts("= SPSR : ");
+	uart_puts("spsr_el1 = ");
 	uart_hex(spsr_el1_);
-	uart_puts("= ELR  : ");
+	uart_puts("elr_el1  = ");
 	uart_hex(elr_el1_);
-	uart_puts("= ESR  : ");
+	uart_puts("esr_el1  = ");
 	uart_hex(esr_el1_);		
 	uart_puts("-------------EL1--------------");
 }

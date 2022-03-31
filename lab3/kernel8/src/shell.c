@@ -5,7 +5,7 @@
 #include "cpio.h"
 #include "allocator.h"
 #include "dtb_parser.h"
-#include "exception.h"
+#include "el_switch.h"
 
 void shell_get_command(char *cmd, int lim);
 void shell_execute(char *cmd);
@@ -35,7 +35,7 @@ void shell_execute(char *cmd)
 		uart_puts("alloc:\t test the function simple_alloc()");
 		uart_puts("dt_parse:\t test the function dt_parse()");
 		uart_puts("dt_info:\t test the function dt_info()");
-		uart_puts("lu:\t switch EL1 to EL0, then laod user program");
+		uart_puts("el_user_start:\t switch EL1 to EL0, then laod user program");
 	}
 	else if (!str_cmp(cmd, "hello")) {
 	    uart_puts("I'm kernel8");
@@ -77,8 +77,8 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(cmd, "dt_info")) {
 		dt_info();	
 	}
-	else if (!str_cmp(cmd, "lu")) {
-		load_user_program();	
+	else if (!str_cmp(cmd, "el_user_start")) {
+		el_user_start();	
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command");
