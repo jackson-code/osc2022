@@ -8,14 +8,14 @@ void uart_init()
     register unsigned int r;
 
     // UART init 
-    *AUX_ENB |=1;          	// enable mini uart(UART1)
-    *AUX_MU_CNTL_REG = 0;	// disable tx, rx
-    *AUX_MU_IER_REG = 0;	// disable interrupt
-    *AUX_MU_LCR_REG = 3;       	// the UART works in 8-bit mode
-    *AUX_MU_MCR_REG = 0;	// Don’t need auto flow control
-    //*AUX_MU_IIR_REG = 0xc6;    	// disable interrupts
+    *AUX_ENB |=1;          		// enable mini uart(UART1)
+    *AUX_MU_CNTL_REG = 0;		// disable tx, rx
+    *AUX_MU_IER_REG = 0;		// disable interrupt
+    *AUX_MU_LCR_REG = 3;    	// the UART works in 8-bit mode
+    *AUX_MU_MCR_REG = 0;		// Don’t need auto flow control
+    //*AUX_MU_IIR_REG = 0xc6;   // disable interrupts
     *AUX_MU_BAUD_REG = 270;    	// 115200 baud rate
-    *AUX_MU_IIR_REG = 6;	// no FIFO
+    *AUX_MU_IIR_REG = 6;		// no FIFO(buffer)
 
 
     // configure GPFSELn register to change alternate function(UART1)
@@ -34,39 +34,17 @@ void uart_init()
     r = 150; 
     while (r--) { asm volatile("nop"); }
     *GPPUDCLK0 = 0;        	// flush GPIO setup
-    
-    /*
-	//#ifdef	async
-		*AUX_MU_IER_REG = 1;   // enable receive interrupts
-	//#endif
-    
-    
-    *AUX_MU_CNTL_REG = 3;     	// enable tx, rx
-    
-	read_buf_start = read_buf_end = 0;
-	write_buf_start = write_buf_end = 0;
-	enable_uart_interrupt();
-	*/
-	
-	/* initialize Mini UART */
-	*AUX_ENB |= 1;		   // enable mini UART
-	*AUX_MU_CNTL_REG = 0;  // disable transmitter, receiver during configuration
 
 	//#ifdef	async
 		*AUX_MU_IER_REG = 1;   // enable receive interrupts
 	//#endif
-	
-	*AUX_MU_LCR_REG = 3;   // enable 8 bit mode
-	*AUX_MU_MCR_REG = 0;   // set RTS line to be always high
-	*AUX_MU_BAUD_REG = 270;    // set baud rate to 115200
-	// comment this line to avoid weird character
-	// *AUX_MU_IIR_REG = 0xc6;	// no FIFO
+
 	*AUX_MU_CNTL_REG = 3;  // enable transmitter and receiver back
 	
+	// asynch read/write
 	read_buf_start = read_buf_end = 0;
 	write_buf_start = write_buf_end = 0;
 	enable_uart_interrupt();
-
 }
 
 void uart_flush()
@@ -244,41 +222,47 @@ void uart_puts_bySize(char *s, int size){
 /*                  irq                   */
 /******************************************/
 
-void enable_uart_interrupt() { *ENB_IRQS1 = AUX_IRQ; }
-void disable_uart_interrupt() { *DISABLE_IRQS1 = AUX_IRQ; }		// all interrupts remain asserted until disabled or the interrupt source is cleared.
-void assert_transmit_interrupt() { *AUX_MU_IER_REG |= 0x2; }		// Enable transmit interrupts
-void clear_transmit_interrupt() { *AUX_MU_IER_REG &= ~(0x2); }		// Disable transmit interrupts
+void enable_uart_interrupt() { *ENB_IRQS1 = AUX_IRQ; }			// enable uart interrupt
+void disable_uart_interrupt() { *DISABLE_IRQS1 = AUX_IRQ; }		// disable uart interrupt, all interrupts remain asserted until disabled or the interrupt source is cleared.
+
+void assert_receive_interrupt() { *AUX_MU_IER_REG |= 0x1; }		// If this bit is set the interrupt line is asserted whenever the receive FIFO holds at least 1 byte
+void clear_receive_interrupt() { *AUX_MU_IER_REG &= ~(0x1); }	// If this bit is clear no receive interrupts are generated
+
+
+void assert_transmit_interrupt() { *AUX_MU_IER_REG |= 0x2; }	// If this bit is set the interrupt line is asserted whenever the transmit FIFO is empty.
+void clear_transmit_interrupt() { *AUX_MU_IER_REG &= ~(0x2); }	// If this bit is clear no transmit interrupts are generated
 
 void uart_handler()
 {
 	disable_uart_interrupt();
 	
-	// decide interrupt status (p13)
-	int read = (*AUX_MU_IIR_REG & 0x4);			// Receiver holds valid byte
-	int write = (*AUX_MU_IIR_REG & 0x2);		// Transmit holding register empty
+	//uart_puts("(uart handler)");
+	
+	// decide interrupt issued by rx/tx (p13)
+	int rx = (*AUX_MU_IIR_REG & 0x4);			// Receiver holds valid byte		(condition of rx issued interrupt)
+	int tx = (*AUX_MU_IIR_REG & 0x2);			// Transmit holding register empty	(condition of tx issued interrupt)
 	int no_irq = (*AUX_MU_IIR_REG & 0x6);
 	
-	if (read) {
-	    char c = (char)(*AUX_MU_IO_REG);
-    	read_buf[read_buf_end++] = c;
+	if (rx) {
+    	read_buf[read_buf_end++] = (char)(*AUX_MU_IO_REG);
+    	uart_async_puts(read_buf + read_buf_end - 1);		// show what you type immediately
+    	
     	if (read_buf_end == MAX_BUFFER_LEN) 
     		read_buf_end = 0;
 	}
-	else if (write) {
+	else if (tx) {
 	    while (*AUX_MU_LSR_REG & 0x20) {				// the transmit FIFO can accept at least one byte
 			if (write_buf_start == write_buf_end) {
 				clear_transmit_interrupt();				// no stuff to write, disable transmit interrupts
 				break;
 			}
-			char c = write_buf[write_buf_start++];
-			*AUX_MU_IO_REG = c;
+			*AUX_MU_IO_REG = write_buf[write_buf_start++];
 			if (write_buf_start == MAX_BUFFER_LEN) 
 				write_buf_start = 0;
 		}
 	}
 	else if(no_irq) {
 	}
-	
 	enable_uart_interrupt();
 }
 

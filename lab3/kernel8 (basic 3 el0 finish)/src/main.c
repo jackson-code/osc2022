@@ -21,9 +21,6 @@ void main()
     //uart_flush();    
     //uart_puts("uart init");
     
-    test_uart_async();
-    
-    uart_puts("******************************555");	
 
 	int MAXCMD = 20;
     char cmd[MAXCMD]; 

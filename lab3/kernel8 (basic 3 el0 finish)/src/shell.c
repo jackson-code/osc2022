@@ -84,13 +84,9 @@ void shell_execute(char *cmd)
 		dt_info();	
 	}
 	else if (!str_cmp(cmd, "b123")) {
+		core_timer_enable();			// defined in timer.S
+		set_expired_time(2);			// 2 seconds
 		el_user_start();	
-	}
-	else if (!str_cmp(cmd, "b2")) {
-		timer_time_after_booting();	
-	}
-	else if (!str_cmp(cmd, "b3")) {
-		uart_async_puts("test test\n");
 	}
 	else if (!str_cmp(cmd, "a1")) {
 		add_timer();	
