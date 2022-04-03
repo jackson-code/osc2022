@@ -228,7 +228,6 @@ void disable_uart_interrupt() { *DISABLE_IRQS1 = AUX_IRQ; }		// disable uart int
 void assert_receive_interrupt() { *AUX_MU_IER_REG |= 0x1; }		// If this bit is set the interrupt line is asserted whenever the receive FIFO holds at least 1 byte
 void clear_receive_interrupt() { *AUX_MU_IER_REG &= ~(0x1); }	// If this bit is clear no receive interrupts are generated
 
-
 void assert_transmit_interrupt() { *AUX_MU_IER_REG |= 0x2; }	// If this bit is set the interrupt line is asserted whenever the transmit FIFO is empty.
 void clear_transmit_interrupt() { *AUX_MU_IER_REG &= ~(0x2); }	// If this bit is clear no transmit interrupts are generated
 
@@ -236,7 +235,7 @@ void uart_handler()
 {
 	disable_uart_interrupt();
 	
-	//uart_puts("(uart handler)");
+	//uart_puts("(uart handler)");		// infinite uart interrupt, why???
 	
 	// decide interrupt issued by rx/tx (p13)
 	int rx = (*AUX_MU_IIR_REG & 0x4);			// Receiver holds valid byte		(condition of rx issued interrupt)
@@ -244,6 +243,7 @@ void uart_handler()
 	int no_irq = (*AUX_MU_IIR_REG & 0x6);
 	
 	if (rx) {
+		//uart_puts("(rx)");
     	read_buf[read_buf_end++] = (char)(*AUX_MU_IO_REG);
     	uart_async_puts(read_buf + read_buf_end - 1);		// show what you type immediately
     	
@@ -256,6 +256,7 @@ void uart_handler()
 				clear_transmit_interrupt();				// no stuff to write, disable transmit interrupts
 				break;
 			}
+			//uart_puts("(tx)");
 			*AUX_MU_IO_REG = write_buf[write_buf_start++];
 			if (write_buf_start == MAX_BUFFER_LEN) 
 				write_buf_start = 0;

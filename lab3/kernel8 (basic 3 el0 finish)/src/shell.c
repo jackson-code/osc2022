@@ -27,6 +27,23 @@ void shell_get_command(char *cmd, int lim)
 	uart_puts("\0");
 }
 
+
+void shell_async_get_command(char *cmd, int lim)
+{
+	int c;
+	while (--lim > 0 && (c = uart_async_getc()) != '\n') {
+		*cmd++ = c;
+		uart_async_puts(cmd-1);
+	}
+	*cmd = '\0';
+	
+	//uart_async_puts(cmd);
+	
+	// print \n\r
+	//uart_puts("\0");
+}
+
+
 void shell_execute(char *cmd)
 {
 	if (!str_cmp(cmd, "help")) {

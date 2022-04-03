@@ -29,4 +29,14 @@ void main()
         shell_get_command(cmd, MAXCMD);
         shell_execute(cmd);
     }
+    
+    /*
+	assert_receive_interrupt();
+	assert_transmit_interrupt();
+    while(1) {  
+        shell_async_get_command(cmd, MAXCMD);
+        shell_execute(cmd);
+    }
+    */
+
 }
