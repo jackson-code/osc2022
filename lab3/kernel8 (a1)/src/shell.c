@@ -51,28 +51,29 @@ void shell_execute(char *cmd)
 	int i = 0;
 	while (i < token_num) {
 		uart_puts(tokens[i++]);
+		uart_puts("\n");
 	}
 		
 	char *keyword = tokens[0];	
 	
 	if (!str_cmp(keyword, "help")) {
-		uart_puts("help:\t print this help menu");
-		uart_puts("hello:\t print Hello World!");
-		uart_puts("reboot:\t reboot the device");
-		uart_puts("boardinfo:\t print the raspi revision & memory base addr and size");
-		uart_puts("ls:\t list all file (parse the .cpio)");
-		uart_puts("cat:\t print file content (parse the .cpio)");
-		uart_puts("alloc:\t test the function simple_alloc()");
-		uart_puts("dt_parse:\t test the function dt_parse()");
-		uart_puts("dt_info:\t test the function dt_info()");
-		uart_puts("b12:\t el_user_start(), switch EL1 to EL0, then laod user program, print current time each 2 seconds");
+		uart_puts("help:\t print this help menu\n");
+		uart_puts("hello:\t print Hello World!\n");
+		uart_puts("reboot:\t reboot the device\n");
+		uart_puts("boardinfo:\t print the raspi revision & memory base addr and size\n");
+		uart_puts("ls:\t list all file (parse the .cpio)\n");
+		uart_puts("cat:\t print file content (parse the .cpio)\n");
+		uart_puts("alloc:\t test the function simple_alloc()\n");
+		uart_puts("dt_parse:\t test the function dt_parse()\n");
+		uart_puts("dt_info:\t test the function dt_info()\n");
+		uart_puts("b12:\t el_user_start(), switch EL1 to EL0, then laod user program, print current time each 2 seconds\n");
 		//uart_puts("");
 	}
 	else if (!str_cmp(keyword, "hello")) {
-	    uart_puts("I'm kernel8");
+	    uart_puts("I'm kernel8\n");
 	}
 	else if (!str_cmp(keyword, "reboot")) {
-	    uart_puts("rebooting...");
+	    uart_puts("rebooting...\n");
 	    reset(150);
 	}
 	else if (!str_cmp(keyword, "boardinfo")) {    
@@ -99,7 +100,7 @@ void shell_execute(char *cmd)
     		uart_puts(s);
 	    }
     	else {
-			uart_puts("no space in heap");
+			uart_puts("no space in heap\n");
 		}
 	}
 	else if (!str_cmp(keyword, "dt_parse")) {
@@ -115,13 +116,13 @@ void shell_execute(char *cmd)
 	}
 	else if (!str_cmp(keyword, "a1")) {
 	 	if (token_num == 3) {
-	 		set_timeout();	
+	 		set_timeout(tokens[1], tokens[2]);	
 	 	}
 		else {
-			uart_puts("ERROR: # args not right");
+			uart_puts("ERROR: # args not right\n");
 		}	
 	}
 	else {
-		uart_puts("ERROR: unsupport shell command");
+		uart_puts("ERROR: unsupport shell command\n");
 	}
 }

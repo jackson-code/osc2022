@@ -3,6 +3,8 @@
 
 #include "uart.h"
 #include "el1.h"
+#include "convert.h"
+#include "allocator.h"
 
 // #define TIME_FREQ 0x03b9aca0
 
@@ -23,7 +25,8 @@ timeout_event *timeout_queue_head, *timeout_queue_tail;
 
 void timeout_event_init();
 //void set_timeout(char *args);
-void set_timeout();
+void set_timeout(char *msg, char *arg2);
+//void set_timeout();
 void timer_callback(char *msg); 
 //void add_timer(void (*callback)(char *), char *args, unsigned int duration);
 void add_timer();

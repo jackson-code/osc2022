@@ -81,3 +81,29 @@ unsigned int btol(unsigned int num){
             ((num>>8)&0xff00) | 	// move byte 2 to byte 1
             ((num<<24)&0xff000000); // byte 0 to byte 3
 }
+
+unsigned int atoui(char *s)
+{
+	unsigned int num = 0;
+	for(int i = 0; s[i] != '\0'; ++i){
+		if(s[i] >= '0' && s[i] <= '9') 
+			num = num * 10 + s[i] - '0';
+		//else 
+		//	num = 0;
+	}
+	return num;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
