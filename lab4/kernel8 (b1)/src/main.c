@@ -27,7 +27,7 @@ void main()
 	int MAXCMD = 20;
   char cmd[MAXCMD]; 
     
-  //#define async
+  #define async
     
   #ifdef	async
 	enable_interrupt();

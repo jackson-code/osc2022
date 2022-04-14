@@ -104,7 +104,7 @@ void place_buddy(unsigned long st, unsigned long ed, int flag) {
 void init_buddy(unsigned long stat_ptr) {
   buddy_stat = (char*)stat_ptr;
   uart_puts("buddy system start address: ");
-  uart_put_hex(stat_ptr);						// andy設在 __end
+  uart_put_hex(stat_ptr);						// stat_ptr = __end
   uart_puts("\n");
 
   // 1.
@@ -226,6 +226,8 @@ void *alloc_page(unsigned int size) {
   // search memory in free list by ord
   unsigned int find_ord = target_ord;
   while (list_empty(&buddy.free_list[find_ord])) {	//if is empty
+  	uart_put_int(find_ord);
+  	uart_puts(" order has no element in free_list\n");
     find_ord++;
     if (find_ord >= BUDDY_MAX) {
       uart_puts("out of memory\n");					// happen when size > 128 mb or reserved memory occupy all memory
@@ -249,12 +251,17 @@ void *alloc_page(unsigned int size) {
   // while(1 > 0) { bd = idx of buddy in 4KB (右邊的buddy), release the 4KB (add into free_lsit) }
   // release smaller order memory 
   while (find_ord > target_ord) {
-    uart_puts("release\n");
     find_ord--;
     unsigned int bd = buddy_pagenum(pn, find_ord);	// pagenum of buddy in lower(smaller ord) layer
     set_buddy_flag(buddy_stat[bd], BUDDY_FREE);		
     set_buddy_ord(buddy_stat[bd], find_ord);
-    push_list(&buddy.free_list[find_ord], (list_head *)pagenum_to_ptr(bd));	
+    push_list(&buddy.free_list[find_ord], (list_head *)pagenum_to_ptr(bd));
+    
+    uart_puts("release order ");	
+  	uart_put_int(find_ord);
+  	uart_puts("'s buddy ");
+  	uart_put_hex(bd);
+  	uart_puts("\n");
   }
   uart_puts("find alloc order: ");
   uart_put_int(find_ord);
@@ -618,12 +625,40 @@ void print_slab(){
 	uart_puts("*********************************************\n");
 }
 
+char *demo_ptr1;
+char *demo_ptr2;
+void demo_alloc_page()
+{
+	demo_ptr1 = alloc_page(64*4096);
+	demo_ptr2 = alloc_page(64*4096);
+	print_buddy_info();
+}
+void demo_free_page()
+{
+	free_page(demo_ptr1);
+	free_page(demo_ptr2);
+	print_buddy_info();
+}
 
+char *demo_ptr3;
+char *demo_ptr4;
+void demo_kmalloc()
+{
+	demo_ptr3 = kmalloc(48);
+	demo_ptr4 = kmalloc(21);
+	print_slab();
+}
+
+void demo_kfree()
+{
+	kfree(demo_ptr3);
+	print_slab();
+}
 
 
 void test_buddy(){
 	print_buddy_info();
-	char*p = alloc_page(128*4096);		// buddy sys will find ord 7, if no ord 7 page, alloc ord 8(or bigger if 8 is not exist in free_list) and release half to ord 7 
+	char*p = alloc_page(64*4096);
 	print_buddy_info();
 	free_page(p);
 	print_buddy_info();

@@ -15,7 +15,7 @@ void shell_get_command(char *cmd, int lim)
 	//uart_async_puts(cmd);
 	
 	// print \n\r
-	uart_puts("\0");
+	uart_puts("\n\r");
 }
 
 
@@ -48,11 +48,13 @@ void shell_execute(char *cmd)
 	}
 	
 	// debug
+	/*
 	int i = 0;
 	while (i < token_num) {
 		uart_puts(tokens[i++]);
 		uart_puts("\n");
 	}
+	*/
 		
 	char *keyword = tokens[0];	
 	
@@ -122,11 +124,23 @@ void shell_execute(char *cmd)
 			uart_puts("ERROR: # args not right\n");
 		}	
 	}
-	else if (!str_cmp(keyword, "test_buddy")) {
-		test_buddy();
+	else if (!str_cmp(keyword, "buddy")) {
+		print_buddy_info();
 	}
-	else if (!str_cmp(keyword, "test_slab")) {
-		test_slab();
+	else if (!str_cmp(keyword, "slab")) {
+		print_slab();
+	}
+	else if (!str_cmp(keyword, "demo_alloc_page")) {
+		demo_alloc_page();
+	}
+	else if (!str_cmp(keyword, "demo_free_page")) {
+		demo_free_page();
+	}
+	else if (!str_cmp(keyword, "demo_kmalloc")) {
+		demo_kmalloc();
+	}
+	else if (!str_cmp(keyword, "demo_kfree")) {
+		demo_kfree();
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

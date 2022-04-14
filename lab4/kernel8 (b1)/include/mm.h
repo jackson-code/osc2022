@@ -100,5 +100,11 @@ void print_slab();
 void test_buddy();
 void test_slab();
 
+// for demo
+void demo_alloc_page();
+void demo_free_page();
+void demo_kmalloc();
+void demo_kfree();
+
 
 #endif  /*_BUDDY_H */
