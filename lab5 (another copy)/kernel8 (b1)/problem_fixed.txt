@@ -1,0 +1,17 @@
+1. want to execute host2pi.py
+	terminal: 
+		python3 host2pi.py
+	problem:
+		Traceback (most recent call last):
+		  File "/usr/lib/python3/dist-packages/serial/serialposix.py", line 265, in open
+			self.fd = os.open(self.portstr, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+		PermissionError: [Errno 13] Permission denied: '/dev/ttyUSB0'
+	fix:
+		terminal:
+			sudo chmod a+rw /dev/ttyUSB0
+			python3 host2pi.py
+			
+2. kill screen cmd
+	press:
+		ctrl+a, k, y
+
