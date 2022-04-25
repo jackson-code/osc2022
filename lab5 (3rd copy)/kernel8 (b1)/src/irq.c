@@ -24,7 +24,7 @@ void default_exception_handler()
 	uart_puts("---------------------------\n");
 	*/
 	
-	//uart_puts("default_exception_handler");
+	uart_puts("irq ");
 	//uart_puts("\n");
 }
 

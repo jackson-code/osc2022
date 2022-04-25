@@ -1,6 +1,6 @@
 #include "scheduler.h"
 
-#define debug
+//#define debug
 
 void print_queue();
 circular_queue *decide_queue(enum task_status status);
@@ -22,7 +22,7 @@ void sche_push(Task *task)
 {
     #ifdef debug
         uart_puts("sche_push() begin\n");
-        print_queue(task->status);
+        print_queue();
     #endif
 
     circular_queue *queue = decide_queue(task->status);
@@ -40,7 +40,7 @@ void sche_push(Task *task)
     }
 
     #ifdef debug
-        print_queue(task->status);
+        print_queue();
         uart_puts("sche_push() end\n");
     #endif
 }
@@ -53,7 +53,7 @@ Task *sche_pop(enum task_status status)
 {
     #ifdef debug
         uart_puts("sche_pop() begin\n");
-        print_queue(status);
+        print_queue();
     #endif
 
     circular_queue *queue = decide_queue(status);
@@ -77,7 +77,7 @@ Task *sche_pop(enum task_status status)
     }
 
     #ifdef debug
-        print_queue(status);
+        print_queue();
         uart_puts("sche_pop() end\n");
     #endif
 }
@@ -90,7 +90,7 @@ Task *sche_pop_specific(Task *tar)
 {
     #ifdef debug
         uart_puts("sche_pop_specific() begin\n");
-        print_queue(tar->status);
+        print_queue();
     #endif
 
     circular_queue *queue = decide_queue(tar->status);
@@ -115,13 +115,14 @@ Task *sche_pop_specific(Task *tar)
         do {
             if (ret == tar) {
                 prev_ret->next = ret->next;
+                //ret->next = 0;
                 if (tar == queue->end) {            // end will be remove, so end must be updata
                     queue->end = queue->end->next;
                 }
                 queue->beg = queue->end->next;      // maybe beg will be remove, so beg must be updata
                 
                 #ifdef debug
-                    print_queue(tar->status);
+                    print_queue();
                     uart_puts("sche_pop_specific() end\n");
                 #endif
                 

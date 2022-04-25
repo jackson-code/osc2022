@@ -49,12 +49,6 @@ void threadSchedule(){
 			"::"r"(sche.idle));
 	}
 	else{
-		
-		//uart_puts("%d %x %x %x\n",rq.beg->id,rq.beg->context[10],rq.beg->context[11],rq.beg->context[12]);
-		//uart_puts("%d -> %d\n",rq.end->id,rq.beg->id);
-		
-		// get next thread's addr (x1)
-		// get executing thread's reg set (x0)
 		asm volatile("\
 			mov x1, %0\n\
 			mrs x0, tpidr_el1\n\
@@ -69,8 +63,6 @@ Task* thread_create(void* func){
 		uart_puts("new_task isn't aligned!!\n");
 		while(1){}
 	}
-
-	//rq.count++;
 	
 	uart_puts("thead_create, assign fp, lr, sp, \t");
 	new_task->context[10]=(unsigned long)new_task+TASKSIZE;//fp
@@ -89,9 +81,6 @@ Task* thread_create(void* func){
 
 /*--------------------------------------------*/
 
-/*
- remove all EXIT threads from RQ and memory
-*/
 void zombiesKill(){//called by idle()
 	Task* tar = 0;
 	while (tar = sche_pop(TASK_DEAD)) {
@@ -154,7 +143,7 @@ void idle(){
 	sche.idle = (unsigned long)kmalloc(TASKSIZE);
 	asm volatile("msr tpidr_el1, %0\n"::"r"(sche.idle));
 
-	while(1){
+	while(sche_next_rq()){
 		//uart_getc();
 		zombiesKill();
 		//doFork();
@@ -213,7 +202,7 @@ int fork(){
 
 
 void foo1(){
-	for(int i = 0; i < 2; ++i){
+	for(int i = 0; i < 10; ++i){
 		uart_puts("Thread id: ");
 		uart_put_int(tidGet());
 		uart_puts(", ");
@@ -223,28 +212,14 @@ void foo1(){
 		delay(1000000);
 		threadSchedule();
 	}
-
 	exit();
 }
 
 void threadTest1(){
-	//Task* cur=thread_create(0);//use startup stack (not kernel stack)
-	//asm volatile("msr tpidr_el1, %0\n"::"r"((unsigned long)cur));
-
-	// mem for kernel x19~x30
-	/*
-	unsigned long cur = (unsigned long)kmalloc(TASKSIZE);
-	asm volatile("msr tpidr_el1, %0\n"::"r"(cur));
-	rq.caller = cur;
-	*/
-
-	for(int i=0;i<3;++i){
+	for(int i = 0; i < 3; ++i){
 		thread_create(foo1);
 	}
-
 	idle();
-
-	//kfree((void *)cur);
 	uart_puts("threadTest finish\n");
 }
 
