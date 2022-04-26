@@ -58,7 +58,7 @@ void init_startup(){
 	reserve_mem((unsigned long)&__end, mem_size / PAGE_SIZE);     					// buddy system
 	//uart_puts("buddy system reserve finish\n");
 	//uart_puts("reserve cpio\n");
-	reserve_mem(0x30000000,0x100000);												// cpio
+	reserve_mem(0x20000000,0x10000000);												// cpio
 	//uart_puts("cpio reserve finish\n");
 	//uart_puts("reserve dtb\n");
 	reserve_mem(0x31000000,0x1000000);                  							// dtb

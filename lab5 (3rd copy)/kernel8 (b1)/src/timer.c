@@ -124,7 +124,7 @@ unsigned long get_current_time() {
 /********************************************************/
 //                      irq								//
 /********************************************************/
-void el1_timer_irq(){
+void timer_el1_irq(){
 /*
   	uart_puts("el1 Current time: ");
   	uart_put_int(get_current_time());

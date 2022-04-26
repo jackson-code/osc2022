@@ -29,9 +29,10 @@ void default_exception_handler()
 }
 
 // don't use uart func in this func, avoiding infinite uart interrupt
-void handle_el0_irq()
+void lower_el_aarch64_irq_()
 {
-	//disable_interrupt();
+	disable_interrupt();
+	//uart_puts("lower_el_aarch64_irq_ \n");
     unsigned int uart = (*IRQ_PENDING_1 & AUX_IRQ);
     unsigned int core_timer = (*CORE0_INTERRUPT_SOURCE & 0x2);
     if(uart){
@@ -40,19 +41,89 @@ void handle_el0_irq()
     else if(core_timer){
         el0_timer_irq();
     }
-	//enable_interrupt();
+	enable_interrupt();
 }
 
-void handle_el1_irq()
+void curr_el_spx_irq_()
 {
-	//disable_interrupt();
+	disable_interrupt();
+	//uart_puts("curr_el_spx_irq_ \n");
     unsigned int uart = (*IRQ_PENDING_1 & AUX_IRQ);
     unsigned int core_timer = (*CORE0_INTERRUPT_SOURCE & 0x2);
     if(uart){
         uart_handler();
     }
     else if(core_timer){// CNTPNIRQ
-        el1_timer_irq();
+        timer_el1_irq();
     }
-	//enable_interrupt();
+	enable_interrupt();
 }
+
+void lower_el_aarch64_sync_()
+{
+	disable_interrupt();
+	//uart_puts("lower_el_aarch64_sync_ \n");
+	enable_interrupt();
+}
+
+
+//*********************************************************//
+//              imcomplete exception                       //
+//*********************************************************//
+void curr_el_sp0_sync_()
+{
+	uart_puts("curr_el_sp0_sync_ ");
+}
+
+void curr_el_sp0_irq_()
+{
+	uart_puts("curr_el_sp0_irq_ ");
+}
+
+void curr_el_sp0_fiq_()
+{
+	uart_puts("curr_el_sp0_fiq_ ");
+}
+void curr_el_sp0_serror_()
+{
+	uart_puts("curr_el_sp0_serror_ ");
+}
+void curr_el_spx_sync_()
+{
+	uart_puts("curr_el_spx_sync_ ");
+}
+void curr_el_spx_fiq_()
+{
+	uart_puts("curr_el_spx_fiq_ ");
+}
+void curr_el_spx_serror_()
+{
+	uart_puts("curr_el_spx_serror_ ");
+}
+void lower_el_aarch64_fiq_()
+{
+	uart_puts("lower_el_aarch64_fiq_ ");
+}
+void lower_el_aarch64_serror_()
+{
+	uart_puts("lower_el_aarch64_serror_ ");
+}
+void lower_el_aarch32_sync_()
+{
+	uart_puts("lower_el_aarch32_sync_ ");
+}
+void lower_el_aarch32_irq_()
+{
+	uart_puts("lower_el_aarch32_irq_ ");
+}
+void lower_el_aarch32_fiq_()
+{
+	uart_puts("lower_el_aarch32_fiq_ ");
+}
+void lower_el_aarch32_serror_()
+{
+	uart_puts("lower_el_aarch32_serror_ ");
+}
+//*********************************************************//
+//*********************************************************//
+//*********************************************************//

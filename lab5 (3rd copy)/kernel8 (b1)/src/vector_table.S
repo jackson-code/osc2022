@@ -1,8 +1,16 @@
-
+// ----- important system register -----
+// SP_EL0 (Stack Pointer):
+//      Holds the stack pointer associated with EL0. At higher Exception levels, this is used as the current stack pointer when the value of SPSel.SP is 0.
+// ELR_EL1 (Exception Link Register):   
+//      When taking an exception to EL1, holds the address to return to. 
+// SPSR_EL1 (Saved Program Status Register):
+//      Holds the saved process state when an exception is taken to EL1.
+// -------------------------------------
 
 // save general registers to stack
 .macro save_all
-    sub sp, sp, 32 * 8
+    // trap frame: used for pass args and return value between user and kernel
+    sub sp, sp, 8 * 32
     stp x0, x1, [sp ,16 * 0]
     stp x2, x3, [sp ,16 * 1]
     stp x4, x5, [sp ,16 * 2]
@@ -19,6 +27,9 @@
     stp x26, x27, [sp ,16 * 13]
     stp x28, x29, [sp ,16 * 14]
     str x30, [sp, 16 * 15]
+
+    //mrs sp_el0, x21
+
 .endm
 
 // load general registers from stack
@@ -52,47 +63,135 @@
 .global exception_vector_table
 exception_vector_table:				// exception handler defined in irq.c 
 	// Current EL with SP0
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler
+    // exception from the current EL while using SP_EL0
+	exception_handler_entry     curr_el_sp0_sync 	
+	exception_handler_entry     curr_el_sp0_irq 	
+	exception_handler_entry     curr_el_sp0_fiq 	
+	exception_handler_entry     curr_el_sp0_serror
 	
 	// Current EL with SPx
-	exception_handler_entry exception_handler 	
-	exception_handler_entry irq_el1_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 
+    // exception from the current EL while using SP_ELx
+	exception_handler_entry     curr_el_spx_sync 	
+	exception_handler_entry     curr_el_spx_irq 	        // have implement
+	exception_handler_entry     curr_el_spx_fiq 	
+	exception_handler_entry     curr_el_spx_serror 
 	
 	// Lower EL using AArch64
-	exception_handler_entry exception_handler 	
-	exception_handler_entry irq_el0_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 
+    // exception from the lower EL at least one lower EL is AArch64
+	exception_handler_entry     lower_el_aarch64_sync 	    // have implement (system call)
+	exception_handler_entry     lower_el_aarch64_irq 	    // have implement
+	exception_handler_entry     lower_el_aarch64_fiq 	
+	exception_handler_entry     lower_el_aarch64_serror 
 	
 	// Lower EL using AArch32
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler 	
-	exception_handler_entry exception_handler  			
-
-// print some system register value
-exception_handler:
-    save_all								// save registers for user.S 
-	bl		default_exception_handler
-	load_all								// load registers for user.S 
-    eret									// return to user.S
+    // exception from the lower EL and all lower EL is AArch32
+	exception_handler_entry     lower_el_aarch32_sync 	
+	exception_handler_entry     lower_el_aarch32_irq 	
+	exception_handler_entry     lower_el_aarch32_fiq 	
+	exception_handler_entry     lower_el_aarch32_serror  			
     
-irq_el0_handler:
+lower_el_aarch64_irq:
    	save_all								// save registers for user.S 
-	bl		handle_el0_irq
+	bl		lower_el_aarch64_irq_
 	load_all								// load registers for user.S 
     eret									// 
 
-irq_el1_handler:
+curr_el_spx_irq:
     save_all
-    bl 		handle_el1_irq
+    bl 		curr_el_spx_irq_
     load_all
     eret
+
+lower_el_aarch64_sync:
+    save_all
+    bl 		lower_el_aarch64_sync_
+    load_all
+    eret
+
+
+//*********************************************************//
+//              imcomplete exception                       //
+//*********************************************************//
+curr_el_sp0_sync:
+    save_all								// save registers for caller
+	bl		curr_el_sp0_sync_
+	load_all								// load registers for caller 
+    eret									// return to caller
+
+curr_el_sp0_irq:
+    save_all								
+	bl		curr_el_sp0_irq_
+	load_all								
+    eret
+
+curr_el_sp0_fiq:
+    save_all								
+	bl		curr_el_sp0_fiq_
+	load_all								
+    eret	
+
+curr_el_sp0_serror:
+    save_all								
+	bl		curr_el_sp0_serror_
+	load_all								
+    eret	
+
+curr_el_spx_sync:
+    save_all								
+	bl		curr_el_spx_sync_
+	load_all								
+    eret	
+
+ curr_el_spx_fiq:
+    save_all								
+	bl		curr_el_spx_fiq_
+	load_all								
+    eret	
+
+curr_el_spx_serror:
+    save_all								
+	bl		curr_el_spx_serror_
+	load_all								
+    eret	
+
+lower_el_aarch64_fiq:
+    save_all								
+	bl		lower_el_aarch64_fiq_
+	load_all								
+    eret	
+
+lower_el_aarch64_serror:
+    save_all								
+	bl		lower_el_aarch64_serror_
+	load_all								
+    eret	
+
+lower_el_aarch32_sync:
+    save_all								
+	bl		lower_el_aarch32_sync_
+	load_all								
+    eret	
+
+lower_el_aarch32_irq:
+    save_all								
+	bl		lower_el_aarch32_irq_
+	load_all								
+    eret	
+
+lower_el_aarch32_fiq:
+    save_all								
+	bl		lower_el_aarch32_fiq_
+	load_all								
+    eret	
+
+lower_el_aarch32_serror:
+    save_all								
+	bl		lower_el_aarch32_serror_
+	load_all								
+    eret			
+//*********************************************************//
+//*********************************************************//
+
 
 
 .global set_exception_vector_table

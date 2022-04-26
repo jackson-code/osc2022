@@ -5,11 +5,12 @@
 #include "cpio.h"
 #include "uart.h"
 #include "my_string.h"
+#include "mm.h"
 
 //#define NEW_ADDR	((char *)0x20000)// user program addr
 
 
-void el_user_start();
+void el1_swich_to_el0(char *img_name);
 
 
 #endif

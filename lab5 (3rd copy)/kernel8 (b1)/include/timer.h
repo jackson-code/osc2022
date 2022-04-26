@@ -30,7 +30,7 @@ void set_timeout(char *msg, char *arg2);
 void timer_callback(char *msg); 
 //void add_timer(void (*callback)(char *), char *args, unsigned int duration);
 void add_timer();
-void el1_timer_irq();
+void timer_el1_irq();
 void el0_timer_irq();
 unsigned long get_current_time();
 void set_expired_time(unsigned int duration);

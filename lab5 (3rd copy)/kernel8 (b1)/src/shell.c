@@ -68,7 +68,7 @@ void shell_execute(char *cmd)
 		uart_puts("alloc:\t test the function simple_alloc()\n");
 		uart_puts("dt_parse:\t test the function dt_parse()\n");
 		uart_puts("dt_info:\t test the function dt_info()\n");
-		uart_puts("b12:\t el_user_start(), switch EL1 to EL0, then laod user program, print current time each 2 seconds\n");
+		uart_puts("lab3_b12:\t el1_swich_to_el0(), switch EL1 to EL0, then laod user program, print current time each 2 seconds\n");
 		//uart_puts("");
 	}
 	else if (!str_cmp(keyword, "hello")) {
@@ -111,10 +111,10 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "dt_info")) {
 		dt_info();	
 	}
-	else if (!str_cmp(keyword, "lab3_b12")) {
+	else if (!str_cmp(keyword, "lab3")) {
 		core_timer_enable();			// defined in timer.S
 		set_expired_time(2);			// 2 seconds
-		el_user_start();	
+		el1_swich_to_el0("user.img");	
 	}
 	else if (!str_cmp(keyword, "lab3_a1")) {
 	 	if (token_num == 3) {
@@ -144,6 +144,9 @@ void shell_execute(char *cmd)
 	}
 	else if (!str_cmp(keyword, "b1")) {
 		threadTest1();
+	}
+	else if (!str_cmp(keyword, "b2")) {
+		el1_swich_to_el0("app2.img");	
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

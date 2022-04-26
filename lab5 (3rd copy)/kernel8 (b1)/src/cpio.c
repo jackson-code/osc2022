@@ -69,8 +69,10 @@ void cpio_cat(char *args){
 
 
 // get file address
-// retrun '\0' if can't find the file
+// retrun "no file\0" if can't find the file
 char* cpio_get_addr(char *args){
+	uart_puts("cpio_get_addr() begin\n");
+
     char *cur_addr_byte = CPIO_ADDR;													// addr in byte
     struct cpio_new_header *cur_addr_struct = (struct cpio_new_header* )cur_addr_byte;	// addr in struct
     struct cpio_size_info size_info;
@@ -79,11 +81,16 @@ char* cpio_get_addr(char *args){
     	char *pathname = (char*)((char*)cur_addr_struct + CPIO_HEADER_SIZE);
     	if (!str_cmp("TRAILER!!!", pathname)) 
     		break;
-    		
+
+        //uart_puts("\t finding file\n");	
+        //uart_puts(pathname);
+        //uart_puts("\n");	
+        
         get_size_info(cur_addr_struct, &size_info);       
         
         if (!str_cmp(args, pathname)) {
         	// get addr of file
+            uart_puts("\t find the file!!!\n");	
             return (char*)((char*)cur_addr_struct + CPIO_HEADER_SIZE + size_info.name_size + size_info.name_align);
         }
         
