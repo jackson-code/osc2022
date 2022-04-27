@@ -1,8 +1,11 @@
-#include "inc/sys_call.h"
+#include "sys_call.h"
 
 
-int main(void) {
-    uart_printf("app2\n");
+void main(void) {
+    //const char buf[100];
+    
+    uartwrite("hello", 6);
+    //uart_printf("app2\n");
     //char buffer[500];
     //uart_printf("read test: \n");
     //int len=uart_read(buffer,500);

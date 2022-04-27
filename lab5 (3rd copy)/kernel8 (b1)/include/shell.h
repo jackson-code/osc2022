@@ -10,7 +10,7 @@
 #include "dtb_parser.h"
 #include "el1.h"
 #include "timer.h"
-#include "irq.h"
+#include "exception.h"
 #include "mm.h"
 #include "thread.h"
 

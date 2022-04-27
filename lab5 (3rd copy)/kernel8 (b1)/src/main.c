@@ -1,7 +1,7 @@
 #include "uart.h"
 #include "shell.h"
 #include "el1.h"
-#include "irq.h"
+#include "exception.h"
 
 /*
 unsigned long __stack_chk_guard;
@@ -22,7 +22,7 @@ void main()
   //uart_flush();    
   //uart_puts("uart init");  
   
-  //init_memory_system();
+  init_memory_system();
 
 	int MAXCMD = 20;
   char cmd[MAXCMD]; 

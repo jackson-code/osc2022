@@ -12,16 +12,16 @@
 #define TASKSIZE 4096
 #define TASKFORK 2
 
-extern void thread_get_current();
+extern Task *thread_get_current();
 extern void thread_switch();
 
 
 void threadSchedule();
 int tidGet();
-void exec(char* path,char** argv);
+//void exec(char* path,char** argv);
 void exit();
-int fork();
+//int fork();
 void threadTest1();
-void threadTest2();
+//void threadTest2();
 
 #endif

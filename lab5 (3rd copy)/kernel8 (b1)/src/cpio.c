@@ -100,7 +100,7 @@ char* cpio_get_addr(char *args){
     }
     
     // file_missing
-    uart_puts("Can't find the file");
+    uart_puts("Can't find the file\n");
     return "no file\0";
 }
 

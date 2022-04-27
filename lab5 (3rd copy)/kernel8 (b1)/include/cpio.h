@@ -11,6 +11,7 @@ General Format: header + pathname + file data + "TRAILER!!!" ("TRAILER!!!" only 
 #ifndef _CPIO_H_
 #define _CPIO_H_
 
+
 //#define CPIO_ADDR ((char*)0x8000000)      // QEMU(0x8000000)
 // [NOTE!!!] have to same with mm.c: init_startup(), and config.txt
 #define CPIO_ADDR ((char*)0x20000000)       
