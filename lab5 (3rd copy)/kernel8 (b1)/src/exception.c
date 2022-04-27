@@ -59,45 +59,6 @@ void curr_el_spx_irq_()
 	enable_interrupt();
 }
 
-
-void sys_get_task_id(struct trapframe* trapframe) {
-    unsigned long task_id = thread_get_current()->id;
-    trapframe->x[0] = task_id;
-}
-
-
-void sys_uart_read(struct trapframe* trapframe) {
-    char* buf = (char*) trapframe->x[0];
-    unsigned long size = trapframe->x[1];
-    
-    //uart_gets((char*)x0,(int)x1,1);
-    uart_get_string(buf, size);
-/*
-    irq_enable();
-    for (unsigned long i = 0; i < size; i++) {
-        buf[i] = uart0_read();
-    }
-    buf[size] = '\0';
-    irq_disable();
-    */
-    trapframe->x[0] = size;
-}
-
-void sys_uart_write(struct trapframe* trapframe) {
-    char* buf = (char*) trapframe->x[0];
-    unsigned long size = trapframe->x[1];
-
-    //irq_enable();
-    uart_puts(buf);
-    /*
-    for (unsigned long i = 0; i < size; i++) {
-        uart0_write(buf[i]);
-    }*/
-    //irq_disable();
-    trapframe->x[0] = size;
-}
-
-
 /*
 	esr_el1 (Exception Syndrome Register):	
 		Holds syndrome information for an exception taken to EL1
@@ -106,33 +67,20 @@ void sys_uart_write(struct trapframe* trapframe) {
 */
 void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {
-	//disable_interrupt();
+	disable_interrupt();
 	//uart_puts("lower_el_aarch64_sync_ \n");
 
 	unsigned long ex =  (esr_el1 >> 26) & 0x3f;	// Exception Class. Indicates the reason for the exception that this register holds information about.
 	if (ex == 0b010101) // SVC instruction execution in AArch64 state
 	{
 		unsigned long sys_call_num = trapframe->x[8];
-		//sys_call_router(sys_call_num, trapframe);
-		switch (sys_call_num) {
-        case SYS_GET_PID:
-            sys_get_task_id(trapframe);
-            break;
-
-        case SYS_UART_READ:
-            sys_uart_read(trapframe);
-            break;
-
-        case SYS_UART_WRITE:
-            sys_uart_write(trapframe);
-            break;
-		}
+		sys_call_router(sys_call_num, trapframe);
 	} else {
 		/* code */
 	}
 	
 
-	//enable_interrupt();
+	enable_interrupt();
 }
 
 

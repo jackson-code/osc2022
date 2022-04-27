@@ -2,9 +2,9 @@
 
 
 void main(void) {
-    //const char buf[100];
+    const char buf[] = "hello";
     
-    uartwrite("hello", 5);
+    uartwrite(buf, 5);
 
     //uart_printf("app2\n");
     //char buffer[500];

@@ -9,7 +9,7 @@ void irq_disable() {
 }
 //void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 //void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
-/*
+
 
 void sys_get_task_id(struct trapframe* trapframe) {
     unsigned long task_id = thread_get_current()->id;
@@ -25,12 +25,12 @@ void sys_uart_read(struct trapframe* trapframe) {
     //uart_gets((char*)x0,(int)x1,1);
     uart_get_string(buf, size);
 
-    irq_enable();
+    //irq_enable();
     for (unsigned long i = 0; i < size; i++) {
-        buf[i] = uart0_read();
+        //buf[i] = uart0_read();
     }
     buf[size] = '\0';
-    irq_disable();
+    //irq_disable();
     
     trapframe->x[0] = size;
 }
@@ -39,17 +39,24 @@ void sys_uart_write(struct trapframe* trapframe) {
     char* buf = (char*) trapframe->x[0];
     unsigned long size = trapframe->x[1];
 
+    uart_puts("sys_uart_write()\n size = ");
+    uart_put_int(size);
+    uart_puts("\n");
+    uart_put_hex((unsigned int)buf);
     //irq_enable();
     uart_puts(buf);
-    
+
+    /*
     for (unsigned long i = 0; i < size; i++) {
-        uart0_write(buf[i]);
+        uart_send(buf[i]);
     }
+    */
+
     //irq_disable();
     trapframe->x[0] = size;
 }
 
-*/
+
 /*
 void sys_exec(struct trapframe* trapframe) {
     void (*func)() = (void(*)()) trapframe->x[0];
