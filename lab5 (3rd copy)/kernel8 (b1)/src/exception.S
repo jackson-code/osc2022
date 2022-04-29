@@ -10,7 +10,7 @@
 // save general registers to stack
 .macro save_all
     // trap frame: used for pass args and return value between user and kernel
-     sub sp, sp, #272
+    sub sp, sp, #272
     stp x0, x1, [sp, #16 * 0]
     stp x2, x3, [sp, #16 * 1]
     stp x4, x5, [sp, #16 * 2]
@@ -27,12 +27,19 @@
     stp x26, x27, [sp, #16 * 13]
     stp x28, x29, [sp, #16 * 14]
 
-    mrs x21, sp_el0
-    stp x30, x21, [sp, #16 * 15]
+//    mrs x21, sp_el0
+ //   stp x30, x21, [sp, #16 * 15]
 
-    mrs x21, elr_el1
-    mrs x22, spsr_el1
-    stp x21, x22, [sp, #16 * 16]
+ //   mrs x21, elr_el1
+ //   mrs x22, spsr_el1
+ //   stp x21, x22, [sp, #16 * 16]
+
+    mrs x9, sp_el0
+    stp x30, x9, [sp, #16 * 15]
+
+    mrs x10, elr_el1
+    mrs x11, spsr_el1
+    stp x10, x11, [sp, #16 * 16]
 .endm
 
 // load general registers from stack

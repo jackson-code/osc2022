@@ -2,6 +2,7 @@
 #include "shell.h"
 #include "el1.h"
 #include "exception.h"
+#include "cpio.h"
 
 /*
 unsigned long __stack_chk_guard;
@@ -23,6 +24,9 @@ void main()
   //uart_puts("uart init");  
   
   init_memory_system();
+  cpio_init();
+
+  //char test[] = "hello\n";
 
 	int MAXCMD = 20;
   char cmd[MAXCMD]; 

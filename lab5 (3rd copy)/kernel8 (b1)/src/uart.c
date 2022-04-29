@@ -45,6 +45,9 @@ void uart_init()
 	read_buf_start = read_buf_end = 0;
 	write_buf_start = write_buf_end = 0;
 	enable_uart_interrupt();
+
+	uart_queue_init(&read_buf, UART0_BUF_MAX_SIZE);
+    uart_queue_init(&write_buf, UART0_BUF_MAX_SIZE);
 }
 
 void uart_flush()
@@ -384,3 +387,51 @@ void test_uart_async(){
 	uart_async_puts("test test");
 }
 
+
+
+
+
+// uart queue
+void uart_queue_init(struct uart_queue* q, int max) {
+    q->front = 0;
+    q->rear = 0;
+    q->max = max;
+}
+
+int uart_queue_empty(struct uart_queue* q) {
+    return q->front == q->rear;
+}
+
+int uart_queue_full(struct uart_queue* q) {
+    return q->front == (q->rear + 1) % q->max;
+}
+
+void uart_queue_push(struct uart_queue* q, char val) {
+    if (uart_queue_full(q)) return;  // drop if full
+    q->buf[q->rear] = val;
+    q->rear = (q->rear + 1) % q->max;
+}
+
+char uart_queue_pop(struct uart_queue* q) {
+    if (uart_queue_empty(q)) return '\0';
+    char elmt = q->buf[q->front];
+    q->front = (q->front + 1) % q->max;
+    return elmt;
+}
+
+
+void uart0_write(char c) {
+    if (*UART0_FR & 0x80) { // TX FIFO Empty
+        // trigger interrupt by sending one character
+        if (uart_queue_empty(&write_buf)) {
+            *UART0_DR = c;
+        }
+        else {
+            uart_queue_push(&write_buf, c);
+            *UART0_DR = uart_queue_pop(&write_buf);
+        }
+    }
+    else {
+        uart_queue_push(&write_buf, c); // push to write queue, drop if buffer full
+    }
+}

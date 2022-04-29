@@ -26,7 +26,8 @@
 /* Function in sys_call.S */
 extern unsigned long getpid();
 extern unsigned long uartread(char buf[], unsigned long size);
-extern unsigned long uartwrite(const char buf[], unsigned long size);
+//extern unsigned long uartwrite(const char buf[], unsigned long size);
+unsigned long uartwrite(const char buf[], unsigned long size);
 extern int exec(void(*func)());
 extern int fork();
 extern void exit(int status);

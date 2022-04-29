@@ -2,6 +2,9 @@
 #define	_MM_H
 #include "list.h"
 #include "utils.h"
+#include "property.h"
+
+extern int property_qemu;
 
 extern unsigned long mem_size;
 

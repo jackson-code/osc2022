@@ -36,21 +36,40 @@ void sys_uart_read(struct trapframe* trapframe) {
 }
 
 void sys_uart_write(struct trapframe* trapframe) {
-    char* buf = (char*) trapframe->x[0];
+    const char* buf = (char*) trapframe->x[0];
+    //const char* buf = "hello";
     unsigned long size = trapframe->x[1];
 
-    uart_puts("sys_uart_write()\n size = ");
+    uart_puts("sys_uart_write()\nsize = ");
     uart_put_int(size);
     uart_puts("\n");
     uart_put_hex((unsigned int)buf);
-    //irq_enable();
-    uart_puts(buf);
 
-    /*
+
+    //uart_puts((unsigned int)buf);
+    uart_puts("\n");
+    //uart_puts((unsigned int)trapframe->x[0]);
+    //irq_enable();
+
+    //for (unsigned long i = 0; i < size; i++) {
+    //    uart0_write(buf[i]);
+    //}
+    
+    unsigned long *buf_64_bit_addr = trapframe->x[0];
     for (unsigned long i = 0; i < size; i++) {
-        uart_send(buf[i]);
+        uart_send(buf_64_bit_addr[i]);
+        //uart_send(buf[i]);
     }
-    */
+
+    
+    /*
+    // fail
+    for (unsigned long i = 0; i < size; i++) {
+        //uart_send(buf[i]);
+        uart_async_putc(buf[i]);
+    }*/
+    
+    irq_disable();
 
     //irq_disable();
     trapframe->x[0] = size;

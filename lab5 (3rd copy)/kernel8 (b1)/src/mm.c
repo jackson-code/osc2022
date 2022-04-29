@@ -5,6 +5,7 @@ extern unsigned char __start, __end;
 unsigned long mem_size = 0x40000000;  // 1 GB
 unsigned long reserve_count = 0;
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //                                          reserve                                           // 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +52,11 @@ void init_startup(){
 	//uart_puts("reserve spin table\n");
 	reserve_mem(0x0, 0x1000);  														// spin table
 	//uart_puts("spin table reserve finish\n");
+
+  //reserve_mem(0x20000, 0x10000);
+
+	reserve_mem(0x60000, 0x10000);  														// app2 (user program)
+
 	//uart_puts("reserve kernel\n");
 	reserve_mem((unsigned long)&__start, (unsigned long)(&__end - &__start)); 		// kernel
 	//uart_puts("kernel reserve finish\n");
@@ -58,8 +64,10 @@ void init_startup(){
 	reserve_mem((unsigned long)&__end, mem_size / PAGE_SIZE);     					// buddy system
 	//uart_puts("buddy system reserve finish\n");
 	//uart_puts("reserve cpio\n");
-	//reserve_mem(0x8000000,0x10000000);												// cpio when using QEMU
-	reserve_mem(0x20000000,0x10000000);												// cpio
+  if (property_qemu)
+    reserve_mem(0x8000000,0x10000000);												// cpio when using QEMU
+  else
+	  reserve_mem(0x20000000,0x10000000);												// cpio
 	//uart_puts("cpio reserve finish\n");
 	//uart_puts("reserve dtb\n");
 	reserve_mem(0x31000000,0x1000000);                  							// dtb

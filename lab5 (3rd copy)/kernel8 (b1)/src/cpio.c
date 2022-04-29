@@ -4,6 +4,22 @@
 #include "my_string.h"
 #include "convert.h"
 
+char *CPIO_ADDR = 0;
+
+void decide_cpio_addr()
+{
+    if (property_qemu)
+        CPIO_ADDR = ((char*)0x8000000);      // QEMU(0x8000000)
+    else {
+        // [NOTE!!!] have to same with mm.c: init_startup(), and config.txt
+        CPIO_ADDR = ((char*)0x20000000); 
+    }
+}
+
+void cpio_init()
+{
+    decide_cpio_addr();
+}
 
 // calculate how many bytes have to padding
 // multiplier always 4 in New ASCII Format

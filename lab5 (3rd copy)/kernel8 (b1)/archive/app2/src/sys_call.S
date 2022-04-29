@@ -13,11 +13,11 @@ uartread:
     svc #0
     ret
 
-.global uartwrite
-uartwrite:
-    mov x8, SYS_UART_WRITE
-    svc #0
-    ret
+//.global uartwrite
+//uartwrite:
+//    mov x8, SYS_UART_WRITE
+//    svc #0
+//    ret
 
 .global exec
 exec:

@@ -26,6 +26,29 @@
 
 
 
+#define UART0_BASE      (MMIO_BASE + 0x201000)
+
+#define UART0_DR        ((unsigned int*)(UART0_BASE))
+#define UART0_FR        ((unsigned int*)(UART0_BASE + 0x18))
+#define UART0_IBRD      ((unsigned int*)(UART0_BASE + 0x24))
+#define UART0_FBRD      ((unsigned int*)(UART0_BASE + 0x28))
+#define UART0_LCRH      ((unsigned int*)(UART0_BASE + 0x2C))
+#define UART0_CR        ((unsigned int*)(UART0_BASE + 0x30))
+#define UART0_IMSC      ((unsigned int*)(UART0_BASE + 0x38))
+#define UART0_RIS       ((unsigned int*)(UART0_BASE + 0x3C))
+#define UART0_MIS       ((unsigned int*)(UART0_BASE + 0x40))
+#define UART0_ICR       ((unsigned int*)(UART0_BASE + 0x44))
+
+#define UART_QUEUE_MAX_SIZE 2048
+#define UART0_BUF_MAX_SIZE  128
+
+struct uart_queue {  // circular queue
+    int front;
+    int rear;
+    int max;
+    char buf[UART_QUEUE_MAX_SIZE];
+};
+
 //#define CORE0_INTERRUPT_SOURCE ((volatile unsigned int *)(0x40000060))
 
 // ch 7.5
@@ -67,4 +90,6 @@ void 	uart_async_putc(char c);
 void	uart_async_puts(char *str);
 void	test_uart_async();
 
+void    uart0_write(char c);
+void    uart_queue_init(struct uart_queue* q, int max);
 #endif

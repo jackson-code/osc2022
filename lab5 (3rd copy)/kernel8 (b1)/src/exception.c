@@ -60,10 +60,11 @@ void curr_el_spx_irq_()
 }
 
 /*
-	esr_el1 (Exception Syndrome Register):	
-		Holds syndrome information for an exception taken to EL1
-	elr_el1 (Exception Link Register):
-		When taking an exception to EL1, holds the address to return to.
+	x0, esr_el1 (Exception Syndrome Register):	
+			Holds syndrome information for an exception taken to EL1
+	x1, elr_el1 (Exception Link Register):
+			When taking an exception to EL1, holds the address to return to.
+	x2, trapframe(sp_el1)
 */
 void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {

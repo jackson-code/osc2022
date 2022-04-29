@@ -11,10 +11,8 @@ General Format: header + pathname + file data + "TRAILER!!!" ("TRAILER!!!" only 
 #ifndef _CPIO_H_
 #define _CPIO_H_
 
-
-//#define CPIO_ADDR ((char*)0x8000000)      // QEMU(0x8000000)
-// [NOTE!!!] have to same with mm.c: init_startup(), and config.txt
-#define CPIO_ADDR ((char*)0x20000000)       
+#include "property.h"
+extern int property_qemu;     
 
 /* Magic identifiers for the "New ASCII Format cpio" file format. */
 #define CPIO_HEADER_MAGIC "070701"
@@ -51,6 +49,7 @@ struct cpio_size_info {
 
 };
 
+void cpio_init();
 void 	cpio_list();
 void 	cpio_cat(char *args);
 char* 	cpio_get_addr(char *args);
