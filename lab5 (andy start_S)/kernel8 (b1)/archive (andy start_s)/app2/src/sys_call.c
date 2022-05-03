@@ -1,7 +1,7 @@
 #include "sys_call.h"
 #include "printf.h"
 
-unsigned long uartwrite(const char *buf, unsigned long size)
+unsigned long uartwrite_ddddd(const char *buf, unsigned long size)
 {
     /*
     asm volatile("mov	x0, %0		\n"::"r"(buf));

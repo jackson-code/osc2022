@@ -29,15 +29,21 @@ struct register_context
 
 typedef struct _Task{
     struct register_context reg;        // this item has to put on the first addr of the struct Task, this way make switching thread easy to get this item
-	unsigned long context[2+1+31];//spsr+elr & usp+ureg
+	unsigned long context[2+1+31];      //spsr+elr & usp+ureg
 	int id;
 	enum task_status status;
-	unsigned long a_addr,a_size,child;
+	unsigned long a_size, child;// app addr, size, child process    
 	struct _Task* next;
+
+    unsigned long a_addr;
+    unsigned long *code;                // user code
 	/*
 	task stack:this ~ this+TASKSIZE
 	*/
 }Task;
+
+
+
 
 
 

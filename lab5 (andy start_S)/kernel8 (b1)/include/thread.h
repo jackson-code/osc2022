@@ -15,7 +15,7 @@
 extern Task *thread_get_current();
 extern void thread_switch();
 
-
+Task* thread_create(void* func);
 void threadSchedule();
 int tidGet();
 //void exec(char* path,char** argv);

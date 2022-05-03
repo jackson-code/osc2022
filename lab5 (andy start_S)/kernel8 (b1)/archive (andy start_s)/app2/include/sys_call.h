@@ -13,6 +13,9 @@
 #define SYS_MBOX_CALL       6
 #define SYS_KILL        	7
 
+#define SYS_UART_WRITE_INT  8
+#define SYS_UART_WRITE_HEX  9
+
 
 #ifndef __ASSEMBLY__
 
@@ -26,11 +29,15 @@
 /* Function in sys_call.S */
 extern unsigned long getpid();
 extern unsigned long uartread(char buf[], unsigned long size);
-//extern unsigned long uartwrite(const char buf[], unsigned long size);
-unsigned long uartwrite(const char buf[], unsigned long size);
+extern unsigned long uartwrite(const char buf[], unsigned long size);
+//unsigned long uartwrite(const char buf[], unsigned long size);
 extern int exec(void(*func)());
 extern int fork();
 extern void exit(int status);
+
+extern unsigned long uart_write_int(unsigned int num);
+extern unsigned long uart_write_hex(unsigned long hex);
+
 
 /* Function in sys_call.c*/
 unsigned int uart_printf(char* fmt,...);

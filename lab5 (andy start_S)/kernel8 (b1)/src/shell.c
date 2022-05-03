@@ -146,7 +146,7 @@ void shell_execute(char *cmd)
 		threadTest1();
 	}
 	else if (!str_cmp(keyword, "b2")) {
-		el1_switch_to_el0("app2.img");	
+		el1_switch_to_el0_lab5("app2.img");	
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

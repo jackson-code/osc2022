@@ -26,8 +26,6 @@ void main()
   init_memory_system();
   cpio_init();
 
-  char test[] = "hello\n";
-
 	int MAXCMD = 20;
   char cmd[MAXCMD]; 
     

@@ -14,6 +14,9 @@
 #define SYS_MBOX_CALL       6
 #define SYS_KILL        	7
 
+#define SYS_UART_WRITE_INT  8
+#define SYS_UART_WRITE_HEX  9
+
 //#ifndef __ASSEMBLY__
 
 //#include "typedef.h"

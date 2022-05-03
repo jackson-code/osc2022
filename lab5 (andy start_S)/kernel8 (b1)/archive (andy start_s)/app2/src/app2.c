@@ -4,14 +4,15 @@
 void main(void) {
     //const char buf[7] = "hello\n"; 
     uartwrite("hello\n", 7);
-    uartwrite("world\n", 7);
     //uart_printf("app2\n");
     //char buffer[500];
     //uart_printf("read test: \n");
     //int len=uart_read(buffer,500);
     //uart_printf("%s,len: %d\n",buffer,len);
 
-    //uart_printf("Fork Test, pid %d\n", getpid());
+    uartwrite("Fork Test, pid = ", 18);
+    uart_write_int(getpid());
+    //uart_write_int(1234);
 
   /*  int cnt = 1;
     int ret = 0;

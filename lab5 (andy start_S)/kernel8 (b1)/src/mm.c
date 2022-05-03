@@ -149,8 +149,8 @@ void init_buddy(unsigned long stat_ptr) {
   place_buddy(mem_itr, (unsigned long)mem_size, BUDDY_FREE);
 }
 
-// ?
 void init_slab() {
+  uart_puts("(mm.c, init_slab)\n");
   // slab_cache for slab_cache type
   slab_cache *sc_slab = (slab_cache *)alloc_page(PAGE_SIZE);
   // slab_cache for page_descriptor type
@@ -198,12 +198,16 @@ void init_slab() {
   pd_slab_tok = pd_slab;	
 }
 void init_memory_system(){
+  uart_puts("---------- mm.c, init_memory_system() ----------\n");
+  
 	//reserve
   init_startup();
 	//buddy
 	init_buddy((unsigned long)&__end);
 	//slab
 	init_slab();
+
+  uart_puts("---------- mm.c, init_memory_system() ----------\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,9 +220,10 @@ void init_memory_system(){
  4. release extra buddy to free_list if allocing size > size
 */
 void *alloc_page(unsigned int size) {
-  uart_puts("alloc size: ");
+  uart_puts("\t(alloc_page)\n");
+  uart_puts("\talloc size: ");
   uart_put_int(size);
-  uart_puts(" Bytes\n");
+  uart_puts(" byte\n");
   size = pad(size, PAGE_SIZE);
 
   // page addr(!= 0) have 51 leading 0-bits at most
@@ -240,7 +245,7 @@ void *alloc_page(unsigned int size) {
   	//uart_puts(" order has no element in free_list\n");
     find_ord++;
     if (find_ord >= BUDDY_MAX) {
-      uart_puts("out of memory\n");					// happen when size > 128 mb or reserved memory occupy all memory
+      uart_puts("\tWARNING: out of memory\n");					// happen when size > 128 mb or reserved memory occupy all memory
       return NULL;
     }
   }
@@ -267,15 +272,16 @@ void *alloc_page(unsigned int size) {
     set_buddy_ord(buddy_stat[bd], find_ord);
     push_list(&buddy.free_list[find_ord], (list_head *)pagenum_to_ptr(bd));
     
-    //uart_puts("release order ");	
+    uart_puts("\trelease order ");	
   	uart_put_int(find_ord);
-  	//uart_puts("'s buddy ");
+  	uart_puts("'s buddy: ");
   	uart_put_hex(bd);
-  	//uart_puts("\n");
+  	uart_puts("\n");
   }
-  //uart_puts("find alloc order: ");
+
+  uart_puts("\tfind alloc order: ");
   uart_put_int(find_ord);
-  //uart_puts("\n"); 
+  uart_puts("\n"); 
   return new_chunk;
 }
 void *pop_cache(cache_list **cl) {
@@ -361,6 +367,8 @@ void *slice_remain_slab(slab_cache *sc) {
  從此slab底下的page中，分配記憶體
 */
 void *alloc_slab(void *slab_tok) {
+  uart_puts("\t(alloc_slab)\n");
+
   slab_cache *sc = (slab_cache *)slab_tok;
   if (sc->free_count > 0) {
     return pop_slab_cache(sc);
@@ -423,13 +431,12 @@ void *register_slab(unsigned int size) {
  size in byte
 */
 void *kmalloc(unsigned long size) {
+  uart_puts("(mm.c, kmalloc)\n");
   size = pad(size, 16);
   if (size > PAGE_SIZE / 2) {//if size > 2048B use allocate page
-  	uart_puts("use allocate page\n");
     return alloc_page(size);
   } 
   else {
-  	uart_puts("use allocate slab\n");
     return alloc_slab(register_slab(size));//if size <= 2048B use allocate slab
   }
 }

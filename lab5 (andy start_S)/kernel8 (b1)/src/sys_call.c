@@ -101,6 +101,44 @@ void sys_exit(struct trapframe* trapframe) {
 
 */
 
+void sys_uart_write_int(struct trapframe* trapframe) {
+    const unsigned long buf = (unsigned long) trapframe->x[0];
+
+    /*
+    uart_puts("sys_uart_write()\nsize = ");
+    uart_put_int(size);
+    uart_puts("\n");
+    uart_put_hex((unsigned int)buf);
+    uart_puts("\n");
+    */
+
+        uart_put_int(buf);
+    
+
+    //irq_disable();
+    trapframe->x[0] = 0;
+}
+
+void sys_uart_write_hex(struct trapframe* trapframe) {
+    const unsigned int buf = (unsigned int ) trapframe->x[0];
+
+    /*
+    uart_puts("sys_uart_write()\nsize = ");
+    uart_put_int(size);
+    uart_puts("\n");
+    uart_put_hex((unsigned int)buf);
+    uart_puts("\n");
+    */
+
+        uart_put_hex(buf);
+
+    //irq_disable();
+    trapframe->x[0] = 0;
+}
+
+
+
+
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
     switch (sys_call_num) {
@@ -115,7 +153,7 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_UART_WRITE:
             sys_uart_write(trapframe);
             break;
-/*
+            /*
         case SYS_EXEC:
             sys_exec(trapframe);
             break;
@@ -128,5 +166,14 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
             sys_exit(trapframe);
             break;
             */
+
+
+        case SYS_UART_WRITE_INT:
+            sys_uart_write_int(trapframe);
+            break;
+
+        case SYS_UART_WRITE_HEX:
+            sys_uart_write_hex(trapframe);
+            break;        
     }
 }

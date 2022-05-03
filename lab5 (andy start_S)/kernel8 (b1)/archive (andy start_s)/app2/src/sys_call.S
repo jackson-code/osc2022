@@ -13,11 +13,11 @@ uartread:
     svc #0
     ret
 
-//.global uartwrite
-//uartwrite:
-//    mov x8, SYS_UART_WRITE
-//    svc #0
-//    ret
+.global uartwrite
+uartwrite:
+    mov x8, SYS_UART_WRITE
+    svc #0
+    ret
 
 .global exec
 exec:
@@ -45,5 +45,17 @@ mbox_call:
 .global kill
 kill:
     mov x8, SYS_KILL
+    svc #0
+    ret
+
+.global uart_write_int
+uart_write_int:
+    mov x8, SYS_UART_WRITE_INT
+    svc #0
+    ret
+
+.global uart_write_hex
+uart_write_hex:
+    mov x8, SYS_UART_WRITE_HEX
     svc #0
     ret
