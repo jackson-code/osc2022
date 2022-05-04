@@ -13,6 +13,7 @@
 #define TASKFORK 2
 
 extern Task *thread_get_current();
+extern void thread_set_current();
 extern void thread_switch();
 
 Task* thread_create(void* func);

@@ -24,3 +24,8 @@ thread_switch:
 thread_get_current:
     mrs x0, tpidr_el1
     ret
+
+.global thread_set_current
+thread_set_current:
+    msr tpidr_el1, x0
+    ret

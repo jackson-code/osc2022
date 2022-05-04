@@ -11,6 +11,7 @@
 
 
 void el1_switch_to_el0(char *img_name);
+void el1_switch_to_el0_lab5(char *img_name);
 
 
 #endif

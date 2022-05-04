@@ -1,5 +1,6 @@
 #include "sys_call.h"
 
+
 void irq_enable() {
     asm volatile("msr daifclr, #2");
 }
@@ -56,13 +57,22 @@ void sys_uart_write(struct trapframe* trapframe) {
 }
 
 
-/*
+
 void sys_exec(struct trapframe* trapframe) {
     void (*func)() = (void(*)()) trapframe->x[0];
-    do_exec(func);
+    //do_exec(func);
     trapframe->x[0] = 0;
 }
 
+void sys_fork(struct trapframe* trapframe) {
+    uart_puts("sys_fork()\n");
+
+    struct Task* parent_task = thread_get_current();
+
+}
+
+
+/*
 void sys_fork(struct trapframe* trapframe) {
     struct task_t* parent_task = get_current_task();
 
@@ -94,26 +104,17 @@ void sys_fork(struct trapframe* trapframe) {
     child_trapframe->x[0] = 0;
     trapframe->x[0] = child_task->id;
 }
+*/
 
 void sys_exit(struct trapframe* trapframe) {
-    do_exit(trapframe->x[0]);
+    //do_exit(trapframe->x[0]);
 }
 
-*/
 
 void sys_uart_write_int(struct trapframe* trapframe) {
     const unsigned long buf = (unsigned long) trapframe->x[0];
 
-    /*
-    uart_puts("sys_uart_write()\nsize = ");
-    uart_put_int(size);
-    uart_puts("\n");
-    uart_put_hex((unsigned int)buf);
-    uart_puts("\n");
-    */
-
-        uart_put_int(buf);
-    
+    uart_put_int(buf);
 
     //irq_disable();
     trapframe->x[0] = 0;
@@ -122,25 +123,16 @@ void sys_uart_write_int(struct trapframe* trapframe) {
 void sys_uart_write_hex(struct trapframe* trapframe) {
     const unsigned int buf = (unsigned int ) trapframe->x[0];
 
-    /*
-    uart_puts("sys_uart_write()\nsize = ");
-    uart_put_int(size);
-    uart_puts("\n");
-    uart_put_hex((unsigned int)buf);
-    uart_puts("\n");
-    */
-
-        uart_put_hex(buf);
+    uart_put_hex(buf);
 
     //irq_disable();
     trapframe->x[0] = 0;
 }
 
 
-
-
-
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
+    uart_puts("sys_call.c\n");
+
     switch (sys_call_num) {
         case SYS_GET_PID:
             sys_get_task_id(trapframe);
@@ -157,7 +149,7 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_EXEC:
             sys_exec(trapframe);
             break;
-
+*/
         case SYS_FORK:
             sys_fork(trapframe);
             break;
@@ -165,7 +157,6 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_EXIT:
             sys_exit(trapframe);
             break;
-            */
 
 
         case SYS_UART_WRITE_INT:

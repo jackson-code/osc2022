@@ -1,38 +1,14 @@
 #include "sys_call.h"
 #include "printf.h"
 
-unsigned long uartwrite_ddddd(const char *buf, unsigned long size)
+unsigned long uartwrite_old_version(const char *buf, unsigned long size)
 {
-    /*
-    asm volatile("mov	x0, %0		\n"::"r"(buf));
-    asm volatile("mov	x1, %0		\n"::"r"(size));
-    asm volatile("mov   x8, %0   	\n"::"m"(2));
-    asm volatile("svc   #0      	\n");
-    asm volatile("ret		        \n");
-    */
-   /*
     asm volatile("mov	x0, %0		\n"
                 "mov	x1, %1		\n"
                 "mov    x8, %2   	\n"
                 "svc   #0       	\n"
                 "ret		          "
-                ::"r"(buf), "r"(size), "r"(2));
-                */
-
-    asm volatile("mov	x0, %0		\n"
-                "mov	x1, %1		\n"
-                "mov	x2, %2		\n"
-                "mov    x8, %3   	\n"
-                "svc   #0       	\n"
-                "ret		          "
-                ::"r"(buf), "r"(size), "r"(buf),"r"(2));
-
-
-/*
-    int res = 0;
-    asm volatile("add	%0, x0		\n":"=m"(res));
-    return res;
-*/
+                ::"r"(buf), "r"(size),"r"(2));
     return 0;
 }
 

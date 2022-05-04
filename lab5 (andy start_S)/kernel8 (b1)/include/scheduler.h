@@ -16,14 +16,12 @@ typedef struct scheduler {
 	unsigned long idle;
 } scheduler;
 
-circular_queue rq;
-circular_queue dq;
-scheduler sche;
-
-void sche_init();
-void sche_push(Task *);
-Task *sche_pop(enum task_status status);
-Task *sche_pop_specific( Task *tar);
-Task *sche_next_rq();
+void sche_init(circular_queue *rq, circular_queue *dq, scheduler *sche);
+//void sche_init(circular_queue rq, circular_queue dq, scheduler *sche);
+//void sche_init(scheduler *sche);
+void sche_push(Task *, scheduler *sche);
+Task *sche_pop(enum task_status status, scheduler *sche);
+Task *sche_pop_specific( Task *tar, scheduler *sche);
+Task *sche_next_rq(scheduler *sche);
 
 #endif

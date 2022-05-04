@@ -1,35 +1,10 @@
 #include "thread.h"
 
-extern scheduler sche;
+scheduler sche;
+circular_queue rq;
+circular_queue dq;
+
 static int task_cnter;
-
-void threadSwitch(){
-	asm volatile("\
-_threadSwitch:\n\
-		stp x19, x20, [x0, 16 * 0]\n\
-		stp x21, x22, [x0, 16 * 1]\n\
-		stp x23, x24, [x0, 16 * 2]\n\
-		stp x25, x26, [x0, 16 * 3]\n\
-		stp x27, x28, [x0, 16 * 4]\n\
-		stp x29, x30, [x0, 16 * 5]\n\
-		mov x9, sp\n\
-		str x9, [x0, 16 * 6]\n\
-		\n\
-		ldp x19, x20, [x1, 16 * 0]\n\
-		ldp x21, x22, [x1, 16 * 1]\n\
-		ldp x23, x24, [x1, 16 * 2]\n\
-		ldp x25, x26, [x1, 16 * 3]\n\
-		ldp x27, x28, [x1, 16 * 4]\n\
-		ldp x29, x30, [x1, 16 * 5]\n\
-		ldr x9, [x1, 16 * 6]\n\
-		mov sp, x9\n\
-		\n\
-		msr tpidr_el1, x1\n\
-		\n\
-		ret\n\
-	"::);
-}
-
 
 /*
  context switch
@@ -37,7 +12,7 @@ _threadSwitch:\n\
 void threadSchedule(){
 	uart_puts("thread_schedule\n");
 
-	Task *next_rq = sche_next_rq();
+	Task *next_rq = sche_next_rq(&sche);
 
 	if(next_rq == 0) {					// run queue is empty, so switch to idle thread
 		asm volatile("\
@@ -61,7 +36,7 @@ Task* thread_create(void* func){
 		while(1){}
 	}
 	
-	uart_puts("thead_create, assign fp, lr, sp, \t");
+	uart_puts("thead_create, assign fp, lr, sp\n");
 	new_task->reg.fp = (unsigned long)new_task + TASKSIZE;
 	new_task->reg.lr = (unsigned long)func;
 	new_task->reg.sp = (unsigned long)new_task + TASKSIZE;
@@ -71,7 +46,7 @@ Task* thread_create(void* func){
 	new_task->a_addr = new_task->a_size = new_task->child=0;
 	new_task->next = 0;
 
-	sche_push(new_task);		// push into rq
+	sche_push(new_task, &sche);		// push into rq
 
 	return new_task;
 }
@@ -80,7 +55,7 @@ Task* thread_create(void* func){
 
 void zombiesKill(){//called by idle()
 	Task* tar = 0;
-	while ((tar = sche_pop(TASK_DEAD))) {
+	while ((tar = sche_pop(TASK_DEAD, &sche))) {
 		kfree(tar);
 	}
 }
@@ -124,7 +99,7 @@ void taskUpdate(Task* p,Task* c){
 }
 
 void doFork(){//called by idle()
-	Task* tar=rq.beg->next;
+	Task* tar = sche.run_queue->beg->next;
 	while(tar){
 		if((tar->status)&TASKFORK){
 			Task* child=thread_create(0);
@@ -139,9 +114,10 @@ void idle(){
 
 	// create idle thread
 	sche.idle = (unsigned long)kmalloc(TASKSIZE);			// stored idle's reg
-	asm volatile("msr tpidr_el1, %0\n"::"r"(sche.idle));	// tpidr_el1 stored current thread info
+	thread_set_current(sche.idle);							// tpidr_el1 stored current thread info
+	//asm volatile("msr tpidr_el1, %0\n"::"r"(sche.idle));	// tpidr_el1 stored current thread info
 
-	while(sche_next_rq()){
+	while(sche_next_rq(&sche)){
 		//uart_getc();
 		zombiesKill();
 		//doFork();
@@ -178,9 +154,9 @@ void exit(){
 	uart_put_int(cur->id);
 	uart_puts("\n");
 
-	sche_pop_specific(cur);
+	sche_pop_specific(cur, &sche);
 	cur->status = TASK_DEAD;
-	sche_push(cur);
+	sche_push(cur, &sche);
 	threadSchedule();
 
 /*
@@ -191,9 +167,9 @@ void exit(){
 }
 
 int fork(){
-	rq.beg->status|=TASKFORK;
+	//rq->beg->status|=TASKFORK;
 	threadSchedule();
-	return rq.beg->child;
+	return sche.run_queue->beg->child;
 }
 
 /*--------------------------------------------*/
@@ -214,6 +190,8 @@ void foo1(){
 }
 
 void threadTest1(){
+	sche_init(&rq, &dq, &sche);
+
 	for(int i = 0; i < 3; ++i){
 		thread_create(foo1);
 	}
@@ -228,7 +206,7 @@ void foo2(){
 
 void threadTest2(){
 	Task* cur=thread_create(0);//use startup stack (not kernel stack)
-	asm volatile("msr tpidr_el1, %0\n"::"r"((unsigned long)cur));//TODO
+	asm volatile("msr tpidr_el1, %0\n"::"r"((unsigned long)cur));
 
 	thread_create(foo2);
 

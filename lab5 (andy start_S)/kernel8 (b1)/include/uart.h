@@ -90,6 +90,4 @@ void 	uart_async_putc(char c);
 void	uart_async_puts(char *str);
 void	test_uart_async();
 
-void    uart0_write(char c);
-void    uart_queue_init(struct uart_queue* q, int max);
 #endif

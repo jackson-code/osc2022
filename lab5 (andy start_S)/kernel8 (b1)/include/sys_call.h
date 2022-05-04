@@ -4,6 +4,7 @@
 #include "trapframe.h"
 #include "thread.h"
 #include "uart.h"
+//#include "task.h"
 
 #define SYS_GET_PID    		0
 #define SYS_UART_READ       1
@@ -36,6 +37,12 @@ extern int exec(void(*func)());
 extern int fork();
 extern void exit(int status);
 */
+
+// function in thread.S
+extern Task *thread_get_current();
+extern void thread_set_current();
+extern void thread_switch();
+
 
 //#endif
 #endif
