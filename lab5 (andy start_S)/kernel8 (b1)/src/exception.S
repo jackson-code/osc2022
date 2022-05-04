@@ -7,6 +7,7 @@
 //      Holds the saved process state when an exception is taken to EL1.
 // -------------------------------------
 
+
 // save general registers to stack
 .macro save_all
     // trap frame: used for pass args and return value between user and kernel
@@ -26,13 +27,6 @@
     stp x24, x25, [sp, #16 * 12]
     stp x26, x27, [sp, #16 * 13]
     stp x28, x29, [sp, #16 * 14]
-
-//    mrs x21, sp_el0
- //   stp x30, x21, [sp, #16 * 15]
-
- //   mrs x21, elr_el1
- //   mrs x22, spsr_el1
- //   stp x21, x22, [sp, #16 * 16]
 
     mrs x9, sp_el0
     stp x30, x9, [sp, #16 * 15]
@@ -124,7 +118,7 @@ lower_el_aarch64_sync:
     save_all
     mrs x0, esr_el1
     mrs x1, elr_el1
-    mov x2, sp          
+    mov x2, sp                              // trapframe
     bl 		lower_el_aarch64_sync_
     load_all
     eret

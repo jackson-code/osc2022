@@ -7,7 +7,6 @@ circular_queue *decide_queue(enum task_status status, scheduler *sche);
 
 void sche_init(circular_queue *rq, circular_queue *dq, scheduler *sche)
 {
-    
     rq->beg = 0;
     rq->end = 0;
 
@@ -17,12 +16,6 @@ void sche_init(circular_queue *rq, circular_queue *dq, scheduler *sche)
     sche->run_queue = rq;
     sche->dead_queue = dq;
     sche->idle = 0;
-    
-   /*
-    sche->run_queue->beg = sche->run_queue->end = 0;
-    sche->dead_queue->beg = sche->dead_queue->end = 0;
-    sche->idle = 0;
-    */
 }
 
 void sche_push(Task *task, scheduler *sche)

@@ -1,5 +1,9 @@
 #include "sys_call.h"
+#include "process.h"
 
+//extern circular_queue rq_proc;
+//extern circular_queue dq_proc;
+extern scheduler sche_proc;
 
 void irq_enable() {
     asm volatile("msr daifclr, #2");
@@ -66,9 +70,16 @@ void sys_exec(struct trapframe* trapframe) {
 
 void sys_fork(struct trapframe* trapframe) {
     uart_puts("sys_fork()\n");
+    Task *child = process_fork(trapframe);
 
-    struct Task* parent_task = thread_get_current();
+	sche_push(child, &sche_proc);
+    sche_next_rq(&sche_proc);               
 
+    if (sche_proc.run_queue->beg->child == 0) {     // child
+        trapframe->x[0] = 0;
+    } else {                                        // parent
+        trapframe->x[0] = child->id;
+    }
 }
 
 
@@ -108,6 +119,56 @@ void sys_fork(struct trapframe* trapframe) {
 
 void sys_exit(struct trapframe* trapframe) {
     //do_exit(trapframe->x[0]);
+    uart_puts("sys_exit()\n");
+
+	Task* cur = sche_proc.run_queue->beg;
+	//asm volatile("mrs %0, tpidr_el1\n":"=r"(cur):);
+	//uart_put_int(cur->id);
+	//uart_puts("\n");
+
+	sche_pop_specific(cur, &sche_proc);
+    kfree(cur->code);
+    kfree(cur);
+	//cur->status = TASK_DEAD;
+	//sche_push(cur, &sche_proc);
+
+	Task *next = sche_proc.run_queue->beg;
+
+/*
+    for (int i = 0; i < 30; i+=2)
+    {
+        asm("stp %0, %1, [%2, #16 * %3]"
+            :
+            :"r" (next->trapframe.x[i]), "r" (next->trapframe.x[i+1]), "r" (trapframe), "r" (i));
+    }
+ */
+
+    // TODO: remove child from parent
+
+    // x0 ~ x31
+    for (int i = 0; i < 31; i++)
+    {
+        asm("str %0, [%1, %2]"
+            :
+            :"r" (next->trapframe.x[i]), "r" (trapframe), "r" (8 * i));
+    }
+
+    // x0 ~ x31
+    //"mrs x9, %0\n"
+    asm("str %0, [%1, #8 * 31]\n"
+        :
+        :"r" (next->trapframe.sp_el0), "r" (trapframe));
+    
+    asm("str %0, [%1, #8 * 32]\n"
+        :
+        :"r" (next->trapframe.elr_el1), "r" (trapframe));
+
+    asm("str %0, [%1, #8 * 33]\n"
+        :
+        :"r" (next->trapframe.spsr_el1), "r" (trapframe));
+    
+    //threadSchedule();
+
 }
 
 
@@ -131,7 +192,7 @@ void sys_uart_write_hex(struct trapframe* trapframe) {
 
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
-    uart_puts("sys_call.c\n");
+//    uart_puts("\nsys_call.c\n");
 
     switch (sys_call_num) {
         case SYS_GET_PID:

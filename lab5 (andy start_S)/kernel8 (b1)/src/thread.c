@@ -43,10 +43,11 @@ Task* thread_create(void* func){
 
 	new_task->id = task_cnter++;
 	new_task->status = TASK_RUN;
-	new_task->a_addr = new_task->a_size = new_task->child=0;
+	new_task->a_addr = new_task->a_size = 0;
+	new_task->child = (Task *)0;	// thread shared same code
 	new_task->next = 0;
 
-	sche_push(new_task, &sche);		// push into rq
+	//sche_push(new_task, &sche);		// push into rq
 
 	return new_task;
 }
@@ -62,7 +63,7 @@ void zombiesKill(){//called by idle()
 
 void taskUpdate(Task* p,Task* c){
 	p->status^=TASKFORK;
-	p->child=c->id;
+	//p->child=c->id;
 
 	Task* tmp=c->next;
 	char* src=(char*)p;
@@ -73,7 +74,7 @@ void taskUpdate(Task* p,Task* c){
 		src++;
 	}
 
-	c->id=p->child;
+	//c->id=p->child;
 	uart_puts("Please enter app load address (Hex): ");
 	//c->a_addr=uart_get_hex(1);
 	c->child=0;
@@ -139,7 +140,7 @@ int tidGet(){
 }
 
 void exec(char* path,char** argv){//will not reset sp...
-	unsigned long a_addr;
+	//unsigned long a_addr;
 	uart_puts("Please enter app load address (Hex): ");
 	//a_addr=uart_get_hex(1);
 	//loadApp_with_argv(path,a_addr,argv,&(rq.beg->a_addr),&(rq.beg->a_size));
@@ -168,8 +169,9 @@ void exit(){
 
 int fork(){
 	//rq->beg->status|=TASKFORK;
-	threadSchedule();
-	return sche.run_queue->beg->child;
+	//threadSchedule();
+	//return sche.run_queue->beg->child;
+	return 1;
 }
 
 /*--------------------------------------------*/
@@ -193,7 +195,8 @@ void threadTest1(){
 	sche_init(&rq, &dq, &sche);
 
 	for(int i = 0; i < 3; ++i){
-		thread_create(foo1);
+		Task *new_task = thread_create(foo1);
+		sche_push(new_task, &sche);				// push into rq
 	}
 	idle();
 	uart_puts("threadTest finish\n");

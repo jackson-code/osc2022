@@ -1,6 +1,8 @@
 #ifndef _TASK_H
 #define _TASK_H
 
+#include "trapframe.h"
+
 enum task_status {
 	TASK_IDLE = 0,
 	TASK_RUN = 1,
@@ -32,9 +34,12 @@ typedef struct _Task{
 	unsigned long context[2+1+31];      //spsr+elr & usp+ureg
 	int id;
 	enum task_status status;
-	unsigned long a_size, child;// app addr, size, child process    
-	struct _Task* next;
+	unsigned long a_size;               // app size
+    struct _Task *child;                // child process    
+	struct _Task *next;
 
+    struct trapframe trapframe;                   // user stack & sp_el0, spsr_el1, elr_el1
+    
     unsigned long a_addr;
     unsigned long *code;                // user code
 	/*
