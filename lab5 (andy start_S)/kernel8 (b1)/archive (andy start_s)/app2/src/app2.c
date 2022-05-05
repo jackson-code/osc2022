@@ -1,5 +1,9 @@
 #include "sys_call.h"
 
+void delay(unsigned long num)
+{
+    while (num--) {}
+}
 
 void main(void) {
     //const char buf[7] = "hello\n"; 
@@ -10,11 +14,12 @@ void main(void) {
     //int len=uart_read(buffer,500);
     //uart_printf("%s,len: %d\n",buffer,len);
 
+    long long cur_sp;
+    asm volatile("mov %0, sp" : "=r"(cur_sp));   
     uartwrite("Fork Test, pid = ", 18);
     uart_write_int(getpid());
-
-    uartwrite("\n", 2);
-    uart_write_hex(1234);
+    uartwrite(", sp: ", 7);
+    uart_write_hex(cur_sp);
     uartwrite("\n", 2);
 
     int cnt = 1;
@@ -41,7 +46,7 @@ void main(void) {
             uartwrite(", cnt: ", 8);
             uart_write_int(cnt);
             uartwrite(", ptr: ", 8);
-            uart_write_hex(&cnt);
+            uart_write_hex((unsigned long)&cnt);
             uartwrite(", sp: ", 7);
             uart_write_hex(cur_sp);
             uartwrite("\n", 2);
@@ -54,7 +59,7 @@ void main(void) {
                 uartwrite(", cnt: ", 8);
                 uart_write_int(cnt);
                 uartwrite(", ptr: ", 8);
-                uart_write_hex(&cnt);
+                uart_write_hex((unsigned long)&cnt);
                 uartwrite(", sp: ", 7);
                 uart_write_hex(cur_sp);
                 uartwrite("\n", 2);

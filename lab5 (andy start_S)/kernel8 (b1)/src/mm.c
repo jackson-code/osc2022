@@ -1,5 +1,5 @@
 #include "mm.h"
-#define debug
+//#define debug
 
 extern unsigned char __start, __end;
 unsigned long mem_size = 0x40000000;  // 1 GB
@@ -150,7 +150,7 @@ void init_buddy(unsigned long stat_ptr) {
 }
 
 void init_slab() {
-  uart_puts("(mm.c, init_slab)\n");
+  uart_puts("( mm.c, init_slab )\n");
   // slab_cache for slab_cache type
   slab_cache *sc_slab = (slab_cache *)alloc_page(PAGE_SIZE);
   // slab_cache for page_descriptor type
@@ -220,75 +220,85 @@ void init_memory_system(){
  4. release extra buddy to free_list if allocing size > size
 */
 void *alloc_page(unsigned int size) {
-  uart_puts("\t(alloc_page)\n");
-  uart_puts("\talloc size: ");
-  uart_put_int(size);
-  uart_puts(" byte\n");
-  size = pad(size, PAGE_SIZE);
+    uart_puts("\talloc_page(), alloc size : ");
+    uart_put_int(size);
+    uart_puts(" byte\n");
+    size = pad(size, PAGE_SIZE);
 
-  // page addr(!= 0) have 51 leading 0-bits at most
-  unsigned int target_ord = 51 - __builtin_clzl(size);
-  // target_ord + 12 = # leading 0-bits
-  // (1 << (target_ord + 12)) - 1) = 1...1, # 1 = # leading 0-bits
-  // search for large enough order
-  if ((((1 << (target_ord + 12)) - 1) & size) != 0) {
-    target_ord++;
-  }
-  //uart_puts("target alloc order: ");
-  //uart_put_int(target_ord);
-  //uart_puts("\n");
+    // page addr(!= 0) have 51 leading 0-bits at most
+    unsigned int target_ord = 51 - __builtin_clzl(size);
+    // target_ord + 12 = # leading 0-bits
+    // (1 << (target_ord + 12)) - 1) = 1...1, # 1 = # leading 0-bits
+    // search for large enough order
+    if ((((1 << (target_ord + 12)) - 1) & size) != 0) {
+      target_ord++;
+    }
+    //uart_puts("target alloc order: ");
+    //uart_put_int(target_ord);
+    //uart_puts("\n");
 
-  // search memory in free list by ord
-  unsigned int find_ord = target_ord;
-  while (list_empty(&buddy.free_list[find_ord])) {	//if is empty
-  	uart_put_int(find_ord);
-  	//uart_puts(" order has no element in free_list\n");
-    find_ord++;
-    if (find_ord >= BUDDY_MAX) {
+    // search memory in free list by ord
+    unsigned int find_ord = target_ord;
+    while (list_empty(&buddy.free_list[find_ord])) {	//if is empty
+      uart_put_int(find_ord);
+      //uart_puts(" order has no element in free_list\n");
+      find_ord++;
+      if (find_ord >= BUDDY_MAX) {
       uart_puts("\tWARNING: out of memory\n");					// happen when size > 128 mb or reserved memory occupy all memory
       return NULL;
+      }
     }
-  }
 
-  // get memory from buddy system, remove the memory from free list
-  void *new_chunk = (void *)buddy.free_list[find_ord].next;
-  pop_list((list_head *)new_chunk);
+    // get memory from buddy system, remove the memory from free list
+    void *new_chunk = (void *)buddy.free_list[find_ord].next;
+    pop_list((list_head *)new_chunk);
 
-  // set buddy_stat
-  unsigned int pn = ptr_to_pagenum(new_chunk);		// pagenum = addr in page addressed
-  set_buddy_flag(buddy_stat[pn], BUDDY_USE);
-  set_buddy_ord(buddy_stat[pn], target_ord);
+    // set buddy_stat
+    unsigned int pn = ptr_to_pagenum(new_chunk);		// pagenum = addr in page addressed
+    set_buddy_flag(buddy_stat[pn], BUDDY_USE);
+    set_buddy_ord(buddy_stat[pn], target_ord);
 
-  // e.g. size=4KB, but free_list[0] = free_list[1] = free_list[2] = 0, free_list[3] > 0
-  // so target_ord = 0, find_ord = 3
-  // while(3 > 0) { bd = idx of buddy in 16KB(右邊的buddy), release the 16KB(add into free_lsit) }
-  // while(2 > 0) { bd = idx of buddy in 8KB (右邊的buddy), release the 8KB (add into free_lsit) }
-  // while(1 > 0) { bd = idx of buddy in 4KB (右邊的buddy), release the 4KB (add into free_lsit) }
-  // release smaller order memory 
-  while (find_ord > target_ord) {
-    find_ord--;
-    unsigned int bd = buddy_pagenum(pn, find_ord);	// pagenum of buddy in lower(smaller ord) layer
-    set_buddy_flag(buddy_stat[bd], BUDDY_FREE);		
-    set_buddy_ord(buddy_stat[bd], find_ord);
-    push_list(&buddy.free_list[find_ord], (list_head *)pagenum_to_ptr(bd));
-    
-    uart_puts("\trelease order ");	
-  	uart_put_int(find_ord);
-  	uart_puts("'s buddy: ");
-  	uart_put_hex(bd);
-  	uart_puts("\n");
-  }
+    // e.g. size=4KB, but free_list[0] = free_list[1] = free_list[2] = 0, free_list[3] > 0
+    // so target_ord = 0, find_ord = 3
+    // while(3 > 0) { bd = idx of buddy in 16KB(右邊的buddy), release the 16KB(add into free_lsit) }
+    // while(2 > 0) { bd = idx of buddy in 8KB (右邊的buddy), release the 8KB (add into free_lsit) }
+    // while(1 > 0) { bd = idx of buddy in 4KB (右邊的buddy), release the 4KB (add into free_lsit) }
+    // release smaller order memory 
+    while (find_ord > target_ord) {
+      find_ord--;
+      unsigned int bd = buddy_pagenum(pn, find_ord);	// pagenum of buddy in lower(smaller ord) layer
+      set_buddy_flag(buddy_stat[bd], BUDDY_FREE);		
+      set_buddy_ord(buddy_stat[bd], find_ord);
+      push_list(&buddy.free_list[find_ord], (list_head *)pagenum_to_ptr(bd));
+      
+      #ifdef debug
+        uart_puts("\trelease order ");	
+        uart_put_int(find_ord);
+        uart_puts("'s buddy: ");
+        uart_put_hex(bd);
+        uart_puts("\n");
+      #endif
+    }
 
-  uart_puts("\tfind alloc order: ");
-  uart_put_int(find_ord);
-  uart_puts("\n"); 
-  return new_chunk;
+    #ifdef debug
+      uart_puts("\tfind alloc order: ");
+      uart_put_int(find_ord);
+      uart_puts("\n");
+    #endif
+
+    uart_puts("\talloc addr = 0x");	
+    uart_put_hex((unsigned int)new_chunk);
+    uart_puts("\n");
+
+    return new_chunk;
 }
+
 void *pop_cache(cache_list **cl) {
   void *addr = (void *)*cl;
   *cl = (*cl)->next;
   return addr;
 }
+
 void *pop_slab_cache(slab_cache *sc) {
   if (sc->cache_pd->free_list == NULL) {
     page_descriptor *pd_itr = sc->head_pd;
@@ -431,7 +441,7 @@ void *register_slab(unsigned int size) {
  size in byte
 */
 void *kmalloc(unsigned long size) {
-  uart_puts("(mm.c, kmalloc)\n");
+  uart_puts("( mm.c, kmalloc() )\n");
   size = pad(size, 16);
   if (size > PAGE_SIZE / 2) {//if size > 2048B use allocate page
     return alloc_page(size);
@@ -451,45 +461,51 @@ void *kmalloc(unsigned long size) {
  3. set the topest buddy BUDDY_FREE and push into free_list
 */
 void free_page(void *ptr) {
-  uart_puts("free page: ");
-  uart_put_hex((unsigned long)ptr);
-  uart_puts("\n");
-  
-  // 1.
-  // set buddy_stat
-  unsigned long pagenum = ptr_to_pagenum(ptr);
-  unsigned long ord = get_buddy_ord(buddy_stat[pagenum]);
-  buddy_stat[pagenum] = INIT_PAGE;
-  uart_puts("page pagenum: ");
-  uart_put_hex(pagenum);
-  uart_puts("\n");
-  
-  // 2.
-  // try to merge from the lowest layer(4KB) to the topest layer(128MB)
-  // if buddy is free, keep merging until buddy isn't free or buddy in other layers(different ord)
-  while (ord < BUDDY_MAX - 1) {	// -1: BUDDY_MAX is the topest layer in buddy system
-    unsigned long buddy = buddy_pagenum(pagenum, ord);
-	uart_puts("order ");
-    uart_put_int(ord);
-	uart_puts(", buddy pagenum: ");
-    uart_put_hex(buddy);
-  	uart_puts("\n");
-    if (get_buddy_flag(buddy_stat[buddy]) == BUDDY_FREE &&
-        get_buddy_ord(buddy_stat[buddy]) == ord) {
-      uart_puts("coalesce\n");
-      pop_list((list_head *)pagenum_to_ptr(buddy));
-      buddy_stat[buddy] = INIT_PAGE;
-      ord++;
-      pagenum = pagenum < buddy ? pagenum : buddy;	// idx of upper layer is smaller page num among two buddy
-    } else {
-      break;
-    }
-  }
+    uart_puts("( mm.c, free page : ");
+    uart_put_hex((unsigned long)ptr);
+    uart_puts(" )\n");
+    
+    // 1.
+    // set buddy_stat
+    unsigned long pagenum = ptr_to_pagenum(ptr);
+    unsigned long ord = get_buddy_ord(buddy_stat[pagenum]);
+    buddy_stat[pagenum] = INIT_PAGE;
+    #ifdef debug
+        uart_puts("page pagenum: ");
+        uart_put_hex(pagenum);
+        uart_puts("\n");
+    #endif
+    
+    // 2.
+    // try to merge from the lowest layer(4KB) to the topest layer(128MB)
+    // if buddy is free, keep merging until buddy isn't free or buddy in other layers(different ord)
+    while (ord < BUDDY_MAX - 1) {	// -1: BUDDY_MAX is the topest layer in buddy system
+        unsigned long buddy = buddy_pagenum(pagenum, ord);
 
-  // 3.
-  set_buddy_flag(buddy_stat[pagenum], BUDDY_FREE);
-  set_buddy_ord(buddy_stat[pagenum], ord);
-  push_list(&buddy.free_list[ord], pagenum_to_ptr(pagenum));
+		#ifdef debug
+			uart_puts("order ");
+			uart_put_int(ord);
+			uart_puts(", buddy pagenum: ");
+			uart_put_hex(buddy);
+			uart_puts("\n");
+		#endif
+
+        if (get_buddy_flag(buddy_stat[buddy]) == BUDDY_FREE &&
+            get_buddy_ord(buddy_stat[buddy]) == ord) {
+            //uart_puts("coalesce\n");
+            pop_list((list_head *)pagenum_to_ptr(buddy));
+            buddy_stat[buddy] = INIT_PAGE;
+            ord++;
+            pagenum = pagenum < buddy ? pagenum : buddy;	// idx of upper layer is smaller page num among two buddy
+        } else {
+            break;
+        }
+    }
+
+    // 3.
+    set_buddy_flag(buddy_stat[pagenum], BUDDY_FREE);
+    set_buddy_ord(buddy_stat[pagenum], ord);
+    push_list(&buddy.free_list[ord], pagenum_to_ptr(pagenum));
 }
 
 void free_reserve(void *ptr) {

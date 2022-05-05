@@ -101,8 +101,8 @@ void uart_put_hex(unsigned int d)
         n += n > 9 ? 0x37 : 0x30;
         uart_send(n);
     }
-    uart_send('\r');
-    uart_send('\n');
+    //uart_send('\r');
+    //uart_send('\n');
 }
 
 

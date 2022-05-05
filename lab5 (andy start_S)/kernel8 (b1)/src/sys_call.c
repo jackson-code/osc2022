@@ -1,9 +1,11 @@
 #include "sys_call.h"
 #include "process.h"
+//#include "my_print.h"
 
 //extern circular_queue rq_proc;
 //extern circular_queue dq_proc;
 extern scheduler sche_proc;
+
 
 void irq_enable() {
     asm volatile("msr daifclr, #2");
@@ -72,14 +74,23 @@ void sys_fork(struct trapframe* trapframe) {
     uart_puts("sys_fork()\n");
     Task *child = process_fork(trapframe);
 
-	sche_push(child, &sche_proc);
-    sche_next_rq(&sche_proc);               
+    // parent move to fork queue
+    Task *parent = sche_pop(TASK_RUN, &sche_proc); 
+    parent->status = TASK_FORK;
+	sche_push(parent, &sche_proc);
 
-    if (sche_proc.run_queue->beg->child == 0) {     // child
-        trapframe->x[0] = 0;
-    } else {                                        // parent
-        trapframe->x[0] = child->id;
-    }
+    // child push into run queue 
+	sche_push(child, &sche_proc);          
+
+    // parent
+    parent->trapframe.x[0] = child->id;
+
+    // child
+    child->trapframe.x[0] = 0;
+
+    // run child proc
+    proc_set_trapframe(&(child->trapframe), trapframe);  
+	//print_reg("elr_el1");
 }
 
 
@@ -121,54 +132,41 @@ void sys_exit(struct trapframe* trapframe) {
     //do_exit(trapframe->x[0]);
     uart_puts("sys_exit()\n");
 
-	Task* cur = sche_proc.run_queue->beg;
+	Task* cur = sche_pop(TASK_RUN, &sche_proc);
 	//asm volatile("mrs %0, tpidr_el1\n":"=r"(cur):);
 	//uart_put_int(cur->id);
 	//uart_puts("\n");
 
-	sche_pop_specific(cur, &sche_proc);
+    // remove cur from parent
+    Task *parent = cur->parent;
+    if (parent != 0)
+    {
+        parent->child = 0;
+    }
+    
     kfree(cur->code);
     kfree(cur);
-	//cur->status = TASK_DEAD;
-	//sche_push(cur, &sche_proc);
-
-	Task *next = sche_proc.run_queue->beg;
-
-/*
-    for (int i = 0; i < 30; i+=2)
-    {
-        asm("stp %0, %1, [%2, #16 * %3]"
-            :
-            :"r" (next->trapframe.x[i]), "r" (next->trapframe.x[i+1]), "r" (trapframe), "r" (i));
-    }
- */
-
-    // TODO: remove child from parent
-
-    // x0 ~ x31
-    for (int i = 0; i < 31; i++)
-    {
-        asm("str %0, [%1, %2]"
-            :
-            :"r" (next->trapframe.x[i]), "r" (trapframe), "r" (8 * i));
-    }
-
-    // x0 ~ x31
-    //"mrs x9, %0\n"
-    asm("str %0, [%1, #8 * 31]\n"
-        :
-        :"r" (next->trapframe.sp_el0), "r" (trapframe));
     
-    asm("str %0, [%1, #8 * 32]\n"
-        :
-        :"r" (next->trapframe.elr_el1), "r" (trapframe));
 
-    asm("str %0, [%1, #8 * 33]\n"
-        :
-        :"r" (next->trapframe.spsr_el1), "r" (trapframe));
+	//Task *next = sche_proc.run_queue->beg;
+    Task *next = sche_next(TASK_RUN, &sche_proc);
+    if (next == 0)
+    {
+        uart_puts("\trun queue is empty, pop from fork queue\n");
+        next = sche_pop(TASK_FORK, &sche_proc);
+        if (next == 0)
+        {
+            uart_puts("\tfork queue is empty, stop\n");
+            while (1) {}
+        } else {
+            next->status = TASK_RUN;
+            sche_push(next, &sche_proc);
+        }
+    }
+    uart_puts("\tupdate trapframe, continue to run another process\n");
+    proc_set_trapframe(&(next->trapframe), trapframe);
     
     //threadSchedule();
-
 }
 
 
@@ -229,3 +227,5 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
             break;        
     }
 }
+
+

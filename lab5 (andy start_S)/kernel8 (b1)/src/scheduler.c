@@ -5,7 +5,7 @@
 void print_queue(scheduler *sche); // have bug
 circular_queue *decide_queue(enum task_status status, scheduler *sche);
 
-void sche_init(circular_queue *rq, circular_queue *dq, scheduler *sche)
+void sche_init(circular_queue *rq, circular_queue *dq, circular_queue *fq, scheduler *sche)
 {
     rq->beg = 0;
     rq->end = 0;
@@ -13,8 +13,12 @@ void sche_init(circular_queue *rq, circular_queue *dq, scheduler *sche)
     dq->beg = 0;
     dq->end = 0;
 
+    fq->beg = 0;
+    fq->end = 0;
+
     sche->run_queue = rq;
     sche->dead_queue = dq;
+    sche->fork_queue = fq;
     sche->idle = 0;
 }
 
@@ -138,18 +142,19 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
 }
 
 /*
- return the first element from rq
+ return the first element, and move it to the end
  return 0 if rq is empty
 */
-Task *sche_next_rq(scheduler *sche)
+Task *sche_next(enum task_status status, scheduler *sche)
 {
-    circular_queue *rq = sche->run_queue;
-    if (rq->beg == 0)                // rq is empty
+    circular_queue *queue = decide_queue(status, sche);
+
+    if (queue->beg == 0)                // rq is empty
         return 0;
     else {
-        Task *ret = rq->beg;
-        rq->end = rq->beg;
-        rq->beg = rq->beg->next;
+        Task *ret = queue->beg;
+        queue->end = queue->beg;
+        queue->beg = queue->beg->next;
         return ret;
     }
 }
@@ -160,6 +165,8 @@ circular_queue *decide_queue(enum task_status status, scheduler *sche)
         return sche->run_queue;
     else if (status == TASK_DEAD)
         return sche->dead_queue;
+    else if (status == TASK_FORK)
+        return sche->fork_queue;
     else {
         uart_puts("ERROR in scheduler.c, decide_task()\n");
         return 0;

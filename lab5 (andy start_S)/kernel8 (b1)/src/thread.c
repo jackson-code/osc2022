@@ -3,6 +3,7 @@
 scheduler sche;
 circular_queue rq;
 circular_queue dq;
+circular_queue fq;
 
 static int task_cnter;
 
@@ -12,7 +13,7 @@ static int task_cnter;
 void threadSchedule(){
 	uart_puts("thread_schedule\n");
 
-	Task *next_rq = sche_next_rq(&sche);
+	Task *next_rq = sche_next(TASK_RUN, &sche);
 
 	if(next_rq == 0) {					// run queue is empty, so switch to idle thread
 		asm volatile("\
@@ -118,7 +119,7 @@ void idle(){
 	thread_set_current(sche.idle);							// tpidr_el1 stored current thread info
 	//asm volatile("msr tpidr_el1, %0\n"::"r"(sche.idle));	// tpidr_el1 stored current thread info
 
-	while(sche_next_rq(&sche)){
+	while(sche_next(TASK_RUN, &sche)){
 		//uart_getc();
 		zombiesKill();
 		//doFork();
@@ -192,7 +193,7 @@ void foo1(){
 }
 
 void threadTest1(){
-	sche_init(&rq, &dq, &sche);
+	sche_init(&rq, &dq, &fq, &sche);
 
 	for(int i = 0; i < 3; ++i){
 		Task *new_task = thread_create(foo1);

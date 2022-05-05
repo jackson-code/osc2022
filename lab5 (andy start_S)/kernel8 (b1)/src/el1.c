@@ -71,11 +71,11 @@ void el1_switch_to_el0_lab5_OK(char * img_name)
 
 	char *file_addr = cpio_get_addr(img_name);		
 	unsigned long app_size = find_app_size(img_name);
-	uart_puts("user address : ");
+	uart_puts("user address : 0x");
 	uart_put_hex((unsigned long)file_addr);
-	uart_puts("user prog size : ");
+	uart_puts("\tuser prog size : ");
 	uart_put_int(app_size);
-	uart_puts("\n");
+	uart_puts("byte\n");
 
 	Task *process = thread_create((void *)0);
 	process->a_size = app_size;
