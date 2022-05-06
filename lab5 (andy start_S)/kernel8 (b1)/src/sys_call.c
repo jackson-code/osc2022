@@ -90,7 +90,6 @@ void sys_fork(struct trapframe* trapframe) {
 
     // run child proc
     proc_set_trapframe(&(child->trapframe), trapframe);  
-	//print_reg("elr_el1");
 }
 
 
@@ -129,44 +128,50 @@ void sys_fork(struct trapframe* trapframe) {
 */
 
 void sys_exit(struct trapframe* trapframe) {
-    //do_exit(trapframe->x[0]);
+    int status = trapframe->x[0];                   // useless, spec require
+
     uart_puts("sys_exit()\n");
 
 	Task* cur = sche_pop(TASK_RUN, &sche_proc);
-	//asm volatile("mrs %0, tpidr_el1\n":"=r"(cur):);
-	//uart_put_int(cur->id);
-	//uart_puts("\n");
-
-    // remove cur from parent
-    Task *parent = cur->parent;
-    if (parent != 0)
-    {
-        parent->child = 0;
-    }
     
-    kfree(cur->code);
+    Task *parent = cur->parent;
+    Task *run = sche_next(TASK_RUN, &sche_proc);    // proc will run next
+    Task *next = 0;
+    
+    //kfree(cur->code);
     kfree(cur);
     
-
-	//Task *next = sche_proc.run_queue->beg;
-    Task *next = sche_next(TASK_RUN, &sche_proc);
-    if (next == 0)
+    // run RQ, if RQ exist
+    // run parent form FQ, if RQ empty
+    // run other proc from FQ, if no parent
+    if (run == 0)
     {
-        uart_puts("\trun queue is empty, pop from fork queue\n");
-        next = sche_pop(TASK_FORK, &sche_proc);
-        if (next == 0)
+        uart_puts("\trun queue is empty, ");
+        if (parent != 0)
         {
-            uart_puts("\tfork queue is empty, stop\n");
-            while (1) {}
+            uart_puts("pop parent from fork queue\n");
+            parent->child = 0;                      // remove cur from parent
+            sche_pop_specific(parent, &sche_proc);  // remove parent from fork queue
+            parent->status = TASK_RUN;
+            sche_push(parent, &sche_proc);
+            next = parent;
         } else {
-            next->status = TASK_RUN;
-            sche_push(next, &sche_proc);
+            uart_puts("and no parent, pop other proc from fork queue\n");
+            next = sche_pop(TASK_FORK, &sche_proc);
+            if (next == 0)
+            {
+                uart_puts("\tfork queue is empty, stop\n");
+                while (1) {}
+            } else {
+                next->status = TASK_RUN;
+                sche_push(next, &sche_proc);
+            }
         }
+    } else {
+        next = run;
     }
     uart_puts("\tupdate trapframe, continue to run another process\n");
     proc_set_trapframe(&(next->trapframe), trapframe);
-    
-    //threadSchedule();
 }
 
 

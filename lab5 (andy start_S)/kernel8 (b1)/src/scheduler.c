@@ -30,6 +30,8 @@ void sche_push(Task *task, scheduler *sche)
     #endif
 
     circular_queue *queue = decide_queue(task->status, sche);
+
+    //task->next = 0;
     
     if (queue->beg == 0)                // empty queue
     {
@@ -40,7 +42,7 @@ void sche_push(Task *task, scheduler *sche)
     {
         queue->end->next = task;
         queue->end = task;
-        queue->end->next = sche->run_queue->beg;
+        queue->end->next = queue->beg;
     }
 
     #ifdef debug
@@ -60,30 +62,34 @@ Task *sche_pop(enum task_status status, scheduler *sche)
         print_queue(sche);
     #endif
 
+    Task *ret = 0;
+
     circular_queue *queue = decide_queue(status, sche);
 
     if (queue->beg == 0)                // queue is empty
     {
-        return 0;
+        ret = 0;
     }
     else if (queue->beg == queue->end)  // only one element in queue
     {
-        Task *ret = queue->beg;
+        ret = queue->beg;
         queue->beg = queue->end = 0;
-        return ret;
+        ret->next = 0;
     }
     else                                // more than one element in queue
     {
-        Task *ret = queue->beg;
+        ret = queue->beg;
         queue->end->next = queue->beg->next;
         queue->beg = queue->beg->next;
-        return ret;
+        ret->next = 0;
     }
 
     #ifdef debug
         print_queue(sche);
         uart_puts("sche_pop() end\n");
     #endif
+
+    return ret;
 }
 
 /*
@@ -110,6 +116,7 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
             ret = queue->beg;
             queue->beg = queue->end = 0;     
         }
+        ret->next = 0;
         return ret;
     }
     else                                // more than one element in queue
@@ -119,9 +126,10 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
         do {
             if (ret == tar) {
                 prev_ret->next = ret->next;
-                //ret->next = 0;
+                ret->next = ret;
                 if (tar == queue->end) {            // end will be remove, so end must be updata
-                    queue->end = queue->end->next;
+                    //queue->end = queue->end->next;
+                    queue->end = prev_ret;
                 }
                 queue->beg = queue->end->next;      // maybe beg will be remove, so beg must be updata
                 
@@ -199,6 +207,19 @@ void print_queue(scheduler *sche)
                 uart_puts(", ");
                 cur = cur->next;
             } while (cur != sche->dead_queue->beg);
+        }
+        uart_puts("\n");
+
+        cur = sche->fork_queue->beg; 
+        uart_puts("\tFQ:");
+        if (cur != 0)
+        {
+            do {
+                uart_puts("\tid = ");
+                uart_put_int(cur->id);
+                uart_puts(", ");
+                cur = cur->next;
+            } while (cur != sche->fork_queue->beg);
         }
         uart_puts("\n");
     #endif

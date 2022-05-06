@@ -144,7 +144,7 @@ void el1_switch_to_el0_lab5(char * img_name)
 	Task *process = process_create(file_addr, app_size);
 	
 	//sche_proc.idle = process;
-	thread_set_current(process);
+	//thread_set_current(process);
 	sche_push(process, &sche_proc);				// push into rq
 
 	uart_puts("loading user prog...\n");

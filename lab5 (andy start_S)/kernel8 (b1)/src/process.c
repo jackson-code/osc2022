@@ -125,7 +125,7 @@ Task *process_create(char *file_addr, unsigned long app_size)
 Task *process_fork(struct trapframe *trapframe)
 {
 	Task *child = (Task *)kmalloc(4096);
-	unsigned long *child_code = (unsigned long *)kmalloc(4096);
+	//unsigned long *child_code = (unsigned long *)kmalloc(4096);
 
 	//copy();
 	//thread_get_current();
@@ -149,16 +149,16 @@ Task *process_fork(struct trapframe *trapframe)
 	child->id = pid++;
 	parent->child = child;
 	child->parent = parent;
-	child->code = child_code;
+	//child->code = child_code;
 
 	// copy code section
-	copy((char *)parent->code, (char *)child->code, 4096);
+	//copy((char *)parent->code, (char *)child->code, 4096);
 
 	unsigned long task_offset = parent->trapframe.sp_el0 - (unsigned long)parent;
 	child->trapframe.sp_el0 = (unsigned long)child + task_offset;
 	
-	unsigned long code_offset = trapframe->elr_el1 - (unsigned long)(parent->code);
-	child->trapframe.elr_el1 = (unsigned long)child->code + code_offset;
+	//unsigned long code_offset = trapframe->elr_el1 - (unsigned long)(parent->code);
+	//child->trapframe.elr_el1 = (unsigned long)child->code + code_offset;
 
 	return child;
 }
