@@ -148,6 +148,9 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "b2")) {
 		el1_switch_to_el0_lab5("app2.img");	
 	}
+	else if (!str_cmp(keyword, "ex")) {
+		el1_exec("app1.img");	
+	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");
 	}

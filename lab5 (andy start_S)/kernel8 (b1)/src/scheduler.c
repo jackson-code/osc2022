@@ -1,6 +1,6 @@
 #include "scheduler.h"
 
-#define debug
+//#define debug
 
 void print_queue(scheduler *sche); // have bug
 circular_queue *decide_queue(enum task_status status, scheduler *sche);
@@ -31,8 +31,6 @@ void sche_push(Task *task, scheduler *sche)
     #endif
 
     circular_queue *queue = decide_queue(task->status, sche);
-
-    //task->next = 0;
     
     if (queue->beg == 0)                // empty queue
     {

@@ -1,6 +1,7 @@
 #include "sys_call.h"
 #include "process.h"
 #include "mailbox.h"
+#include "el1.h"
 //#include "my_print.h"
 
 extern scheduler sche_proc;
@@ -64,13 +65,6 @@ void sys_mbox_call(struct trapframe* trapframe) {
     trapframe->x[0] = ret;
 }
 
-
-void sys_exec(struct trapframe* trapframe) {
-    void (*func)() = (void(*)()) trapframe->x[0];
-    //do_exec(func);
-    trapframe->x[0] = 0;
-}
-
 void sys_fork(struct trapframe* trapframe) {
     uart_puts("sys_fork()\n");
     Task *child = process_fork(trapframe);
@@ -102,7 +96,6 @@ void sys_exit(struct trapframe* trapframe) {
     Task *next = 0;
     
     //kfree(cur->code);
-    //kfree(cur);
     free_task(cur);
 
     // run RQ, if RQ exist
@@ -136,6 +129,24 @@ void sys_exit(struct trapframe* trapframe) {
     }
     uart_puts("\tupdate trapframe, continue to run another process\n");
     proc_set_trapframe(&(next->trapframe), trapframe);
+}
+
+
+/*
+    The exec() functions return only if an error has occurred.  The
+    return value is -1
+*/
+void sys_exec(struct trapframe* trapframe) {
+    char *name = (char *)trapframe->x[0];
+    char **argv = (char **)trapframe->x[1];
+
+    //sys_exit(trapframe);
+
+    el1_exec(name, argv);
+    
+
+
+    trapframe->x[0] = 0;
 }
 
 void sys_kill(struct trapframe* trapframe){
@@ -229,6 +240,9 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
 
 void free_task(Task *tar)
 {
-    tar->parent = tar->child = tar->next = 0;
-    kfree(tar);
+    if (tar != 0)
+    {
+        tar->parent = tar->child = tar->next = 0;
+        kfree(tar);
+    }
 }

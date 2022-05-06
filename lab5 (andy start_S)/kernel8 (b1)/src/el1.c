@@ -157,6 +157,34 @@ void el1_switch_to_el0_lab5(char * img_name)
 }
 
 
+void el1_exec(char * img_name)
+{
+	uart_puts("el1_exec() begin\n");
+
+	char *file_addr = cpio_get_addr(img_name);		
+	unsigned long app_size = find_app_size(img_name);
+	uart_puts("user address : ");
+	uart_put_hex((unsigned long)file_addr);
+	uart_puts("user prog size : ");
+	uart_put_int(app_size);
+	uart_puts("\n");
+
+	process_init();
+	Task *process = process_create(file_addr, app_size);
+	
+	//sche_proc.idle = process;
+	//thread_set_current(process);
+	sche_push(process, &sche_proc);				// push into rq
+
+	uart_puts("loading user prog...\n");
+	if (!str_cmp("no file", file_addr)) {
+		uart_puts("ERROR in el1.c, el1_switch_to_el0(): no file");
+	}
+	else {
+		el1_switch_el0(process->reg.sp, process->code);
+	}
+}
+
 void el1_switch_el0(unsigned long sp, unsigned long *code_start_addr)
 {
 	uart_puts("( el1.c, el1_switch_el0 ) begin\n");

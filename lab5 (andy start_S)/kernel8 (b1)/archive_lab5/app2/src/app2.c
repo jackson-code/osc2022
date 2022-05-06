@@ -72,13 +72,12 @@ void main(void) {
                 ++cnt;
             }
 
-            kill(1);
+            //kill(1);
         }
+        //kill(0);
         exit(0);
     }
     else {
-        //printf("parent here, pid %d, child %d\n", get_pid(), ret);
-
         uartwrite("parent here, pid ", 18);
         uart_write_int(getpid());
         uartwrite(", child ", 9);
