@@ -33,6 +33,8 @@ extern unsigned long uartwrite(const char buf[], unsigned long size);
 extern int exec(const char *name, char *const argv[]);
 extern int fork();
 extern void exit(int status);
+extern int mailbox_call(unsigned char ch, unsigned int *mailbox);
+extern void kill(int pid);
 
 extern unsigned long uart_write_int(unsigned int num);
 extern unsigned long uart_write_hex(unsigned long hex);

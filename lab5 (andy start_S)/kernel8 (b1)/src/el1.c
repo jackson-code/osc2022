@@ -130,7 +130,7 @@ void el1_switch_to_el0_lab5_OK(char * img_name)
 
 void el1_switch_to_el0_lab5(char * img_name)
 {
-	uart_puts("el1_switch_to_el0() begin\n");
+	uart_puts("el1_switch_to_el0_lab5() begin\n");
 
 	char *file_addr = cpio_get_addr(img_name);		
 	unsigned long app_size = find_app_size(img_name);

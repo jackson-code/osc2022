@@ -1,9 +1,10 @@
 #include "scheduler.h"
 
-//#define debug
+#define debug
 
 void print_queue(scheduler *sche); // have bug
 circular_queue *decide_queue(enum task_status status, scheduler *sche);
+Task *pop_by_id_in_queue(int id, circular_queue *queue);
 
 void sche_init(circular_queue *rq, circular_queue *dq, circular_queue *fq, scheduler *sche)
 {
@@ -74,14 +75,16 @@ Task *sche_pop(enum task_status status, scheduler *sche)
     {
         ret = queue->beg;
         queue->beg = queue->end = 0;
-        ret->next = 0;
+        //ret->next = 0;
+        ret->next = ret;
     }
     else                                // more than one element in queue
     {
         ret = queue->beg;
         queue->end->next = queue->beg->next;
         queue->beg = queue->beg->next;
-        ret->next = 0;
+        //ret->next = 0;
+        ret->next = ret;
     }
 
     #ifdef debug
@@ -96,10 +99,10 @@ Task *sche_pop(enum task_status status, scheduler *sche)
  return and remove the specific element in queue
  return 0 if can't find the specific element in queue
 */ 
-Task *sche_pop_specific(Task *tar, scheduler *sche)
+Task *sche_pop_by_task(Task *tar, scheduler *sche)
 {
     #ifdef debug
-        uart_puts("sche_pop_specific() begin\n");
+        uart_puts("sche_pop_by_task() begin\n");
         print_queue(sche);
     #endif
 
@@ -116,7 +119,7 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
             ret = queue->beg;
             queue->beg = queue->end = 0;     
         }
-        ret->next = 0;
+        ret->next = ret;
         return ret;
     }
     else                                // more than one element in queue
@@ -135,7 +138,7 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
                 
                 #ifdef debug
                     print_queue(sche);
-                    uart_puts("sche_pop_specific() end\n");
+                    uart_puts("sche_pop_by_task() end\n");
                 #endif
                 
                 return ret;
@@ -144,7 +147,86 @@ Task *sche_pop_specific(Task *tar, scheduler *sche)
                 ret = ret->next;
             }
         } while(ret != queue->beg);
-        uart_puts("ERROR in scheduler.c, sche_pop_specific()\n");
+        uart_puts("ERROR in scheduler.c, sche_pop_by_task()\n");
+        return 0;
+    }
+}
+
+/*
+ return and remove the specific element in queue
+ return 0 if can't find the specific element in queue
+*/ 
+Task *sche_pop_by_id(int id, scheduler *sche)
+{
+    #ifdef debug
+        uart_puts("sche_pop_by_id() begin\n");
+        print_queue(sche);
+    #endif
+
+    Task *ret = 0;
+    if ((ret = pop_by_id_in_queue(id, sche->run_queue)) != 0)
+    {
+        uart_puts("\tfind in RQ\n");
+    }else if ((ret = pop_by_id_in_queue(id, sche->fork_queue)) != 0) {
+        uart_puts("\tfind in FQ\n");
+    }else if ((ret = pop_by_id_in_queue(id, sche->dead_queue)) != 0) {
+        uart_puts("\tfind in DQ\n");
+    }else {
+        uart_puts("\tpid = ");
+        uart_put_int(id);
+        uart_puts(" can't find\n");
+    }
+    
+    #ifdef debug
+        print_queue(sche);
+        uart_puts("sche_pop_by_id() end\n");
+    #endif
+
+    return ret;
+}
+
+Task *pop_by_id_in_queue(int id, circular_queue *queue)
+{
+    if (queue->beg == 0)                // queue is empty
+    {
+        return 0;
+    }
+    else if (queue->beg == queue->end)  // only one element in queue
+    {
+        Task *ret = 0;
+        if (queue->beg->id == id) {
+            ret = queue->beg;
+            queue->beg = queue->end = 0;     
+        }
+        ret->next = ret;
+        return ret;
+    }
+    else                                // more than one element in queue
+    {
+        Task *ret = queue->beg;
+        Task *prev_ret = queue->end;
+        do {
+            if (ret->id == id) {
+                prev_ret->next = ret->next;
+                ret->next = ret;
+                if (ret == queue->end) {            // end will be remove, so end must be updata
+                    //queue->end = queue->end->next;
+                    queue->end = prev_ret;
+                }
+                queue->beg = queue->end->next;      // maybe beg will be remove, so beg must be updata
+                
+                //#ifdef debug
+                //    print_queue(sche);
+                //    uart_puts("sche_pop_by_id() end\n");
+                //#endif
+                
+                return ret;
+            } else {                    // next element
+                prev_ret = ret;
+                ret = ret->next;
+            }
+        } while(ret != queue->beg);
+        //uart_puts("ERROR in scheduler.c, pop_by_id_in_queue()\n");
         return 0;
     }
 }

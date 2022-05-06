@@ -1,11 +1,11 @@
 #include "sys_call.h"
 #include "process.h"
+#include "mailbox.h"
 //#include "my_print.h"
 
-//extern circular_queue rq_proc;
-//extern circular_queue dq_proc;
 extern scheduler sche_proc;
 
+void free_task(Task *tar);
 
 void irq_enable() {
     asm volatile("msr daifclr, #2");
@@ -23,19 +23,13 @@ void sys_get_task_id(struct trapframe* trapframe) {
     trapframe->x[0] = task_id;
 }
 
-
-
 void sys_uart_read(struct trapframe* trapframe) {
     char* buf = (char*) trapframe->x[0];
     unsigned long size = trapframe->x[1];
     
-    //uart_gets((char*)x0,(int)x1,1);
     int len = uart_get_string(buf, size);
 
     //irq_enable();
-    for (unsigned long i = 0; i < size; i++) {
-        //buf[i] = uart0_read();
-    }
     //irq_disable();
     
     trapframe->x[0] = len;
@@ -61,6 +55,14 @@ void sys_uart_write(struct trapframe* trapframe) {
     trapframe->x[0] = size;
 }
 
+void sys_mbox_call(struct trapframe* trapframe) {
+    unsigned char ch = (unsigned char) trapframe->x[0];
+    unsigned int * mailbox = (unsigned int *)trapframe->x[1];
+
+    int ret = mailbox_call(ch, mailbox);
+
+    trapframe->x[0] = ret;
+}
 
 
 void sys_exec(struct trapframe* trapframe) {
@@ -81,50 +83,12 @@ void sys_fork(struct trapframe* trapframe) {
     // child push into run queue 
 	sche_push(child, &sche_proc);          
 
-    // parent
-    parent->trapframe.x[0] = child->id;
-
-    // child
-    child->trapframe.x[0] = 0;
+    parent->trapframe.x[0] = child->id;     // parent return child id
+    child->trapframe.x[0] = 0;              // child return 0
 
     // run child proc
     proc_set_trapframe(&(child->trapframe), trapframe);  
 }
-
-
-/*
-void sys_fork(struct trapframe* trapframe) {
-    struct task_t* parent_task = get_current_task();
-
-    int child_id = privilege_task_create(return_from_fork, parent_task->priority);
-    struct task_t* child_task = &task_pool[child_id];
-
-    char* child_kstack = &kstack_pool[child_task->id][KSTACK_TOP_IDX];
-    char* parent_kstack = &kstack_pool[parent_task->id][KSTACK_TOP_IDX];
-    char* child_ustack = &ustack_pool[child_task->id][USTACK_TOP_IDX];
-    char* parent_ustack = &ustack_pool[parent_task->id][USTACK_TOP_IDX];
-
-    uint64_t kstack_offset = parent_kstack - (char*)trapframe;
-    uint64_t ustack_offset = parent_ustack - (char*)trapframe->sp_el0;
-
-    for (uint64_t i = 0; i < kstack_offset; i++) {
-        *(child_kstack - i) = *(parent_kstack - i);
-    }
-    for (uint64_t i = 0; i < ustack_offset; i++) {
-        *(child_ustack - i) = *(parent_ustack - i);
-    }
-
-    // place child's kernel stack to right place
-    child_task->cpu_context.sp = (uint64_t)child_kstack - kstack_offset;
-
-    // place child's user stack to right place
-    struct trapframe* child_trapframe = (struct trapframe*) child_task->cpu_context.sp;
-    child_trapframe->sp_el0 = (uint64_t)child_ustack - ustack_offset;
-
-    child_trapframe->x[0] = 0;
-    trapframe->x[0] = child_task->id;
-}
-*/
 
 void sys_exit(struct trapframe* trapframe) {
     int status = trapframe->x[0];                   // useless, spec require
@@ -138,8 +102,9 @@ void sys_exit(struct trapframe* trapframe) {
     Task *next = 0;
     
     //kfree(cur->code);
-    kfree(cur);
-    
+    //kfree(cur);
+    free_task(cur);
+
     // run RQ, if RQ exist
     // run parent form FQ, if RQ empty
     // run other proc from FQ, if no parent
@@ -150,7 +115,7 @@ void sys_exit(struct trapframe* trapframe) {
         {
             uart_puts("pop parent from fork queue\n");
             parent->child = 0;                      // remove cur from parent
-            sche_pop_specific(parent, &sche_proc);  // remove parent from fork queue
+            sche_pop_by_task(parent, &sche_proc);  // remove parent from fork queue
             parent->status = TASK_RUN;
             sche_push(parent, &sche_proc);
             next = parent;
@@ -171,6 +136,27 @@ void sys_exit(struct trapframe* trapframe) {
     }
     uart_puts("\tupdate trapframe, continue to run another process\n");
     proc_set_trapframe(&(next->trapframe), trapframe);
+}
+
+void sys_kill(struct trapframe* trapframe){
+    int id = (int)trapframe->x[0];
+    uart_puts("sys_kill()\n");
+
+    Task *tar = sche_pop_by_id(id, &sche_proc);
+
+    Task *child = tar->child;
+    if (child)
+    {
+        child->parent = 0;
+    }
+    Task *parent = tar->parent;
+    if (parent)
+    {
+        parent->child = 0;
+    }
+    
+    //kfree(cur->code);
+    free_task(tar);
 }
 
 
@@ -208,17 +194,25 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_UART_WRITE:
             sys_uart_write(trapframe);
             break;
-            /*
+            
         case SYS_EXEC:
             sys_exec(trapframe);
             break;
-*/
+
         case SYS_FORK:
             sys_fork(trapframe);
             break;
 
         case SYS_EXIT:
             sys_exit(trapframe);
+            break;
+
+        case SYS_MBOX_CALL:
+            sys_mbox_call(trapframe);
+            break;
+
+        case SYS_KILL:
+            sys_kill(trapframe);
             break;
 
 
@@ -233,3 +227,8 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
 }
 
 
+void free_task(Task *tar)
+{
+    tar->parent = tar->child = tar->next = 0;
+    kfree(tar);
+}

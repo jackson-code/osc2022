@@ -16,6 +16,9 @@ void main(void) {
     uart_write_int(len);
     uartwrite("\n", 2);
 
+    //uartwrite("mbox test\n", 15);
+    //mailbox_get_arm_memory();
+
     long long cur_sp;
     asm volatile("mov %0, sp" : "=r"(cur_sp));   
     uartwrite("Fork Test, pid = ", 18);
@@ -68,6 +71,8 @@ void main(void) {
                 delay(1000000);
                 ++cnt;
             }
+
+            kill(1);
         }
         exit(0);
     }
@@ -81,3 +86,5 @@ void main(void) {
         uartwrite("\n", 2);
     }
 }
+
+

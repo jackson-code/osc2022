@@ -19,56 +19,10 @@
 #define TAG_REQUEST_CODE    0x00000000
 #define END_TAG             0x00000000
 
-int mailbox_call(unsigned int *mailbox, unsigned char ch);
-
-void mailbox_get_board_revision() 
-{
-  	unsigned int __attribute__((aligned(16))) mailbox[7];
-  	/* buffer content (ref: mailbox property interface in github) */
-  	mailbox[0] = 7 * 4; // buffer size in bytes
-	mailbox[1] = REQUEST_CODE;
-	// tags begin
-	mailbox[2] = GET_BOARD_REVISION; // tag identifier
-	mailbox[3] = 4; // maximum of request and response value buffer's length.
-	mailbox[4] = TAG_REQUEST_CODE;
-	mailbox[5] = 0; // value buffer
-	// tags end
-	mailbox[6] = END_TAG;
-
-	// get raspi board revision
-	mailbox_call(mailbox, 8); 
-	uart_puts("\nboard revision :\t 0x"); // it should be 0xa020d3 for rpi3 b+
-	uart_put_hex(mailbox[5]);
-}
-
-void mailbox_get_arm_memory() 
-{
-  	unsigned int __attribute__((aligned(16))) mailbox[7];
-  	/* buffer content (ref: mailbox property interface in github) */
-  	mailbox[0] = 8 * 4; // buffer size in bytes
-	mailbox[1] = REQUEST_CODE;
-	// tags begin
-	mailbox[2] = GET_ARM_MEMORY; // tag identifier
-	mailbox[3] = 8; // maximum of request and response value buffer's length.
-	mailbox[4] = TAG_REQUEST_CODE;
-	mailbox[5] = 0; // value buffer
-	mailbox[6] = 0; // value buffer
-	// tags end
-	mailbox[7] = END_TAG;
-
-	// get memory base address and size
-	mailbox_call(mailbox, 8); 
-	uart_puts("\nmemory base address :\t 0x"); 
-	uart_put_hex(mailbox[5]);
-	uart_puts("\nmemory size :\t 0x"); 
-	uart_put_hex(mailbox[6]);
-}
-
-
 /**
  * Returns 0 on failure, non-zero on success
  */
-int mailbox_call(unsigned int *mailbox, unsigned char ch)
+int mailbox_call(unsigned char ch, unsigned int *mailbox)
 {
     // 1. Combine the message address (upper 28 bits) with channel number (lower 4 bits)
     //unsigned int r = (((unsigned int)((unsigned long)mailbox) & ~0xF) | (ch & 0xF)); 
@@ -93,4 +47,54 @@ int mailbox_call(unsigned int *mailbox, unsigned char ch)
     }
     return 0;
 }
+
+void mailbox_get_board_revision() 
+{
+  	unsigned int __attribute__((aligned(16))) mailbox[7];
+  	/* buffer content (ref: mailbox property interface in github) */
+  	mailbox[0] = 7 * 4; // buffer size in bytes
+	mailbox[1] = REQUEST_CODE;
+	// tags begin
+	mailbox[2] = GET_BOARD_REVISION; // tag identifier
+	mailbox[3] = 4; // maximum of request and response value buffer's length.
+	mailbox[4] = TAG_REQUEST_CODE;
+	mailbox[5] = 0; // value buffer
+	// tags end
+	mailbox[6] = END_TAG;
+
+	// get raspi board revision
+	//mailbox_call(8, mailbox);
+	unsigned char ch = 8; 
+	mailbox_call(ch, mailbox); 
+	uart_puts("\nboard revision :\t 0x"); // it should be 0xa020d3 for rpi3 b+
+	uart_put_hex(mailbox[5]);
+}
+
+void mailbox_get_arm_memory() 
+{
+  	unsigned int __attribute__((aligned(16))) mailbox[7];
+  	/* buffer content (ref: mailbox property interface in github) */
+  	mailbox[0] = 8 * 4; // buffer size in bytes
+	mailbox[1] = REQUEST_CODE;
+	// tags begin
+	mailbox[2] = GET_ARM_MEMORY; // tag identifier
+	mailbox[3] = 8; // maximum of request and response value buffer's length.
+	mailbox[4] = TAG_REQUEST_CODE;
+	mailbox[5] = 0; // value buffer
+	mailbox[6] = 0; // value buffer
+	// tags end
+	mailbox[7] = END_TAG;
+
+	// get memory base address and size
+	//mailbox_call(8, mailbox); 
+	unsigned char ch = 8; 
+	mailbox_call(ch, mailbox); 
+	uart_puts("\nmemory base address :\t 0x"); 
+	uart_put_hex(mailbox[5]);
+	uart_puts("\nmemory size :\t 0x"); 
+	uart_put_hex(mailbox[6]);
+}
+
+
+
 

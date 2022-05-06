@@ -20,7 +20,8 @@ typedef struct scheduler {
 void sche_init(circular_queue *rq, circular_queue *dq, circular_queue *fq, scheduler *sche);
 void sche_push(Task *, scheduler *sche);
 Task *sche_pop(enum task_status status, scheduler *sche);
-Task *sche_pop_specific( Task *tar, scheduler *sche);
+Task *sche_pop_by_task( Task *tar, scheduler *sche);
+Task *sche_pop_by_id(int id, scheduler *sche);
 Task *sche_next(enum task_status status, scheduler *sche);
 
 

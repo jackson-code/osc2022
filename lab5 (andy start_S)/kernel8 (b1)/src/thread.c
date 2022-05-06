@@ -156,7 +156,7 @@ void exit(){
 	uart_put_int(cur->id);
 	uart_puts("\n");
 
-	sche_pop_specific(cur, &sche);
+	sche_pop_by_task(cur, &sche);
 	cur->status = TASK_DEAD;
 	sche_push(cur, &sche);
 	threadSchedule();
