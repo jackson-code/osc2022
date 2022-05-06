@@ -30,16 +30,15 @@ void sys_uart_read(struct trapframe* trapframe) {
     unsigned long size = trapframe->x[1];
     
     //uart_gets((char*)x0,(int)x1,1);
-    uart_get_string(buf, size);
+    int len = uart_get_string(buf, size);
 
     //irq_enable();
     for (unsigned long i = 0; i < size; i++) {
         //buf[i] = uart0_read();
     }
-    buf[size] = '\0';
     //irq_disable();
     
-    trapframe->x[0] = size;
+    trapframe->x[0] = len;
 }
 
 void sys_uart_write(struct trapframe* trapframe) {

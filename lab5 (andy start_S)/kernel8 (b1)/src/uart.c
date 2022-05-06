@@ -256,23 +256,28 @@ void uart_put_int(unsigned long num){
 }
 
 
-void uart_get_string(char *s, int max_length){
+unsigned long uart_get_string(char *s, int max_length){
 	char c;
-	int i = 0;
+	int i = 1;	// 1 for '\0'
     while(1){
     	i++;	// string length at least equal to 1, because of '\0' 
         c = uart_getc();
-        if	((*s = c) == '\n' || *s == '\r')
-            break;
+        if	((*s = c) == '\n' || *s == '\r') {
+	        uart_send('\n');
+	        uart_send('\r');
+			break;
+		}
         if (i >= max_length) {
         	uart_puts("Exceed string max length");
 			uart_put_int(max_length);
-        	break;
+			break;;
         }
         uart_send(c);
         s++;
     }
-    *s = '\0';
+	s++;
+	*s = '\0';
+	return i;
 }
 
 

@@ -5,14 +5,16 @@ void delay(unsigned long num)
     while (num--) {}
 }
 
+//#define BUF_MAX 500
+
 void main(void) {
-    //const char buf[7] = "hello\n"; 
-    uartwrite("hello\n", 7);
-    //uart_printf("app2\n");
-    //char buffer[500];
-    //uart_printf("read test: \n");
-    //int len=uart_read(buffer,500);
-    //uart_printf("%s,len: %d\n",buffer,len);
+    char buf[500];
+    unsigned long len = uartread(buf, 500);
+    uartwrite("uartread test\n", 15);
+    uartwrite(buf, len);
+    uartwrite("len : ", 7);
+    uart_write_int(len);
+    uartwrite("\n", 2);
 
     long long cur_sp;
     asm volatile("mov %0, sp" : "=r"(cur_sp));   
@@ -38,7 +40,6 @@ void main(void) {
         uartwrite("\n", 2);
 
         ++cnt;
-/*
         if ((ret = fork()) != 0){
             asm volatile("mov %0, sp" : "=r"(cur_sp));
             uartwrite("first child pid: ", 18);
@@ -67,8 +68,8 @@ void main(void) {
                 delay(1000000);
                 ++cnt;
             }
-        }*/
-        exit();
+        }
+        exit(0);
     }
     else {
         //printf("parent here, pid %d, child %d\n", get_pid(), ret);
