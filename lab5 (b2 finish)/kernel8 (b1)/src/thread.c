@@ -45,8 +45,7 @@ Task* thread_create(void* func){
 	new_task->id = task_cnter++;
 	new_task->status = TASK_RUN;
 	new_task->a_addr = new_task->a_size = 0;
-	new_task->child = (Task *)0;	// thread shared same code
-	new_task->next = 0;
+	new_task->child = new_task->parent = new_task->next = (Task *)0;	
 
 	//sche_push(new_task, &sche);		// push into rq
 

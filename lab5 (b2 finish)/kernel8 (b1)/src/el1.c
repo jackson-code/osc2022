@@ -72,7 +72,7 @@ void el1_exec(char *img_name, char *argv[])
 	uart_put_hex((unsigned long)file_addr);
 	uart_puts("\tuser prog size : ");
 	uart_put_int(app_size);
-	uart_puts("\t");
+	uart_puts("\n");
 
 	process_init();
 	Task *process = process_create(file_addr, app_size);

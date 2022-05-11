@@ -149,6 +149,7 @@ Task *process_fork(struct trapframe *trapframe)
 	child->id = pid++;
 	parent->child = child;
 	child->parent = parent;
+	child->child = (Task *)0;	
 	//child->code = child_code;
 
 	// copy code section

@@ -2,6 +2,7 @@
 #include "process.h"
 #include "mailbox.h"
 #include "el1.h"
+#include "exception.h"
 //#include "my_print.h"
 
 extern scheduler sche_proc;
@@ -15,6 +16,7 @@ void irq_enable() {
 void irq_disable() {
     asm volatile("msr daifset, #2");
 }
+
 //void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 //void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
 
@@ -191,7 +193,6 @@ void sys_uart_write_hex(struct trapframe* trapframe) {
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
 //    uart_puts("\nsys_call.c\n");
-
     switch (sys_call_num) {
         case SYS_GET_PID:
             sys_get_task_id(trapframe);

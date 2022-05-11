@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "mm.h": "c",
+        "list.h": "c",
+        "scheduler.h": "c",
+        "trapframe.h": "c",
+        "my_string.h": "c"
+    }
+}

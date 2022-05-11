@@ -29,7 +29,7 @@ void default_exception_handler()
 }
 
 // don't use uart func in this func, avoiding infinite uart interrupt
-void lower_el_aarch64_irq_()
+void lower_el_aarch64_irq_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {
 	disable_interrupt();
 	//uart_puts("lower_el_aarch64_irq_ \n");
@@ -39,12 +39,15 @@ void lower_el_aarch64_irq_()
         uart_handler();
     }
     else if(core_timer){
-        timer_irq_el0();
+        timer_irq_el0(trapframe);
+		timer_set_expired_time_by_shift(5);
+		//timer_set_expired_time_by_sec(2);
+
     }
 	enable_interrupt();
 }
 
-void curr_el_spx_irq_()
+void curr_el_spx_irq_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {
 	disable_interrupt();
 	//uart_puts("curr_el_spx_irq_ \n");
@@ -54,7 +57,9 @@ void curr_el_spx_irq_()
         uart_handler();
     }
     else if(core_timer){// CNTPNIRQ
-        timer_irq_el1();
+        timer_irq_el1(trapframe);
+		timer_set_expired_time_by_shift(5);
+		//timer_set_expired_time_by_sec(2);
     }
 	enable_interrupt();
 }
@@ -66,23 +71,30 @@ void curr_el_spx_irq_()
 			When taking an exception to EL1, holds the address to return to.
 	x2, trapframe(sp_el1)
 */
+void test(){}
+
 void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {
 	disable_interrupt();
 	//uart_puts("lower_el_aarch64_sync_ \n");
 
-	unsigned long ex =  (esr_el1 >> 26) & 0x3f;	// Exception Class. Indicates the reason for the exception that this register holds information about.
-	if (ex == 0b010101) // SVC instruction execution in AArch64 state
+	unsigned long ec =  (esr_el1 >> 26) & 0x3f;	// Exception Class. Indicates the reason for the exception that this register holds information about.
+	if (ec == 0b010101) // SVC instruction execution in AArch64 state
 	{
 		unsigned long sys_call_num = trapframe->x[8];
 		sys_call_router(sys_call_num, trapframe);
 	} else {
-		/* code */
+		test();
+		/*
+		uart_puts("( exception.c, lower_el_aarch64_sync_() )\n");
+		uart_puts("\tunknown ec : ");
+		uart_put_hex(ec);
+		uart_puts("\n");
+		*/
 	}
-	
-
 	enable_interrupt();
 }
+
 
 
 

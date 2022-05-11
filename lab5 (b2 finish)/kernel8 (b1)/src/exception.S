@@ -104,12 +104,18 @@ exception_vector_table:				// exception handler defined in irq.c
     
 lower_el_aarch64_irq:
    	save_all								// save registers for user.S 
+    mrs x0, esr_el1
+    mrs x1, elr_el1
+    mov x2, sp                              // trapframe
 	bl		lower_el_aarch64_irq_
 	load_all								// load registers for user.S 
     eret									// 
 
 curr_el_spx_irq:
     save_all
+    mrs x0, esr_el1
+    mrs x1, elr_el1
+    mov x2, sp                              // trapframe
     bl 		curr_el_spx_irq_
     load_all
     eret

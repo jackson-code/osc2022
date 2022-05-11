@@ -266,6 +266,29 @@ circular_queue *decide_queue(enum task_status status, scheduler *sche)
     }
 }
 
+/*
+    all proc in from_queue move to to_queue
+    //return 1 if success, 
+    //return 0 if fail
+*/
+void sche_move_all_proc(enum task_status from_status, enum task_status to_status, scheduler *sche)
+{
+    if (from_status == to_status)
+    {
+        return;
+    }
+   
+    circular_queue *from_q = decide_queue(from_status, sche);
+    circular_queue *to_q = decide_queue(to_status, sche);
+    Task *moving = 0;
+    while (from_q->beg != 0)
+    {
+        moving = sche_pop(from_status, sche);
+        moving->status = to_status;
+        sche_push(moving, sche);
+    }
+}
+
 void print_queue(scheduler *sche)
 {
     #ifdef debug

@@ -113,7 +113,7 @@ void shell_execute(char *cmd)
 	}
 	else if (!str_cmp(keyword, "lab3")) {
 		core_timer_enable();			// defined in timer.S
-		set_expired_time(2);			// 2 seconds
+		timer_set_expired_time_by_sec(2);			// 2 seconds
 		el1_switch_to_el0("user.img");	
 	}
 	else if (!str_cmp(keyword, "lab3_a1")) {
@@ -152,6 +152,20 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "ex")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app1.img", argv);	
+	}
+	else if (!str_cmp(keyword, "b3")) {
+		/*
+		unsigned long cntfrq_el0;
+		asm volatile("mrs	%0, cntfrq_el0" : "=r"(cntfrq_el0));
+		cntfrq_el0 = cntfrq_el0 >> 5;
+		asm volatile("msr	cntfrq_el0, %0" : :"r"(cntfrq_el0));
+		*/
+		core_timer_enable();
+		core_timer_enable_el1();				// video play, no ec = 0x18 error
+		timer_set_expired_time_by_shift(5);
+
+		char *argv[] = {"no", "argv"};
+		el1_exec("syscall.img", argv);	
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

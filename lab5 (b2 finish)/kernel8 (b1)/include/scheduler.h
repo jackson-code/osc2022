@@ -24,6 +24,7 @@ Task *sche_pop(enum task_status status, scheduler *sche);
 Task *sche_pop_by_task( Task *tar, scheduler *sche);
 Task *sche_pop_by_id(int id, scheduler *sche);
 Task *sche_next(enum task_status status, scheduler *sche);
-
+void sche_move_all_proc(enum task_status from_status, enum task_status to_status, scheduler *sche);
+void print_queue(scheduler *sche);
 
 #endif

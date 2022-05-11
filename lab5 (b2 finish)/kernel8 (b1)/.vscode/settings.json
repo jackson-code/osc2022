@@ -4,6 +4,7 @@
         "list.h": "c",
         "scheduler.h": "c",
         "trapframe.h": "c",
-        "my_string.h": "c"
+        "my_string.h": "c",
+        "timer.h": "c"
     }
 }

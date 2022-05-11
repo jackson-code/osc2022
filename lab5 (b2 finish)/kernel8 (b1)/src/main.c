@@ -32,6 +32,9 @@ void main()
   #define async
     
 
+	enable_interrupt();
+
+
   #ifdef	async
 	enable_interrupt();
 	while(1) {

@@ -1,10 +1,24 @@
 #include "timer.h"
+#include "process.h"
+#include "scheduler.h"
 
+//extern circular_queue rq_proc;
+//circular_queue dq_proc;
+//circular_queue fq_proc;
+extern scheduler sche_proc;
+
+
+void core_timer_enable_el1(){
+	unsigned long tmp;
+	asm volatile("mrs %0, cntkctl_el1" : "=r"(tmp));
+	tmp |= 1;
+	asm volatile("msr cntkctl_el1, %0" : : "r"(tmp));
+}
 
 void timer_time_after_booting()
 {
 	core_timer_enable();			// defined in timer.S
-	set_expired_time(2);			// 2 seconds
+	timer_set_expired_time_by_sec(2);			// 2 seconds
 }
 
 void set_timeout(char *msg, char *arg2)
@@ -38,7 +52,7 @@ void add_timer(void (*callback)(char *), char *args, unsigned int duration)
 	{
 		//el1_interrupt_enable();
 		core_timer_enable();			// defined in timer.S
-		set_expired_time(duration);
+		timer_set_expired_time_by_sec(duration);
 	}
 	else
 	{
@@ -71,7 +85,7 @@ void add_timer(void (*callback)(char *), char *args, unsigned int duration)
 		timeout_queue_tail = new_timeout_event;
 		uart_puts("69\n");
 		core_timer_enable();
-		set_expired_time(duration);
+		timer_set_expired_time_by_sec(duration);
 		uart_puts("72\n");
 	} 
   	else {
@@ -93,7 +107,7 @@ void add_timer(void (*callback)(char *), char *args, unsigned int duration)
 			new_timeout_event->next = cur;
 			timeout_queue_head->prev = new_timeout_event;
 			timeout_queue_head = new_timeout_event;
-			set_expired_time(duration);
+			timer_set_expired_time_by_sec(duration);
 		} 
 		else {
 			new_timeout_event->prev = cur->prev;
@@ -106,16 +120,27 @@ void add_timer(void (*callback)(char *), char *args, unsigned int duration)
   	uart_puts("finish: add_timer()\n");
 }
 
-void set_expired_time(unsigned int duration)
+void timer_set_expired_time_by_sec(unsigned int duration)
 {
 	unsigned long cntfrq_el0;
 	asm volatile("mrs	%0, cntfrq_el0" : "=r"(cntfrq_el0));				// get frequency of the system counter
 	asm volatile("msr	cntp_tval_el0 ,%0" :: "r"(cntfrq_el0 * duration));
 }
 
+void timer_set_expired_time_by_shift(unsigned int shift)
+{
+	unsigned long cntfrq_el0;
+	asm volatile("mrs	%0, cntfrq_el0" : "=r"(cntfrq_el0));				// get frequency of the system counter
+	asm volatile("msr	cntp_tval_el0 ,%0" :: "r"(cntfrq_el0>>shift));
+}
+
+/*
+	CNTPCT_EL0 system register reports the current system count value
+	CNTFRQ_EL0 reports the frequency of the system count
+*/
 unsigned long get_current_time() {
   unsigned long cntpct_el0, cntfrq_el0;
-  asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0));
+  asm volatile("mrs %0, cntpct_el0" : "=r"(cntpct_el0));	
   asm volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0));
   return cntpct_el0 / cntfrq_el0;
 }
@@ -124,12 +149,61 @@ unsigned long get_current_time() {
 /********************************************************/
 //                      irq								//
 /********************************************************/
-void timer_irq_el1(){
+
+void timer_context_switch(struct trapframe *trapframe)
+{
+	Task *cur = sche_running_proc(&sche_proc);
+	if (cur != 0)
+	{		
+		if (sche_proc.fork_queue->beg != 0)
+		{
+			// all fork proc in fork queue move to run queue
+			sche_move_all_proc(TASK_FORK, TASK_RUN, &sche_proc);
+		}
+
+		sche_next(TASK_RUN, &sche_proc);
+		Task *next = sche_running_proc(&sche_proc);
+		if (next != cur)
+		{
+			proc_set_trapframe(&(next->trapframe), trapframe);  
+		}
+		else
+		{
+
+		}
+	}
+}
+
+void timer_irq_el0(struct trapframe *trapframe){
+	//uart_puts("( timer.c, timer_irq_el0000() )");
+
+	//timer_context_switch(trapframe);
+	
+	//timer_set_expired_time_by_shift(5);
+}
+
+void timer_irq_el1(struct trapframe *trapframe){
+	//uart_puts("( timer.c, timer_irq_el1() )");
+	timer_context_switch(trapframe);
+
+	/*
+	else if (child != 0)
+	{
+		sche_pop_by_task(child, &sche_proc);
+		parent->status = TASK_RUN;
+		sche_push(child, &sche_proc);
+    	proc_set_trapframe(&(child->trapframe), trapframe);  
+	}
+	*/
+	//timer_set_expired_time_by_shift(5);
+}
+
+void timer_irq_el1_lab3(){
 /*
   	uart_puts("el1 Current time: ");
   	uart_put_int(get_current_time());
   	uart_puts("");
-	set_expired_time(2);*/
+	timer_set_expired_time_by_sec(2);*/
   	/*
   	uart_puts("s, ");
   	uart_puts("Command executed time: ");
@@ -145,7 +219,7 @@ void timer_irq_el1(){
     	next->prev = 0;
     	timeout_queue_head = next;
     	unsigned long next_duration = next->register_time + next->duration - get_current_time();
-    	set_expired_time(next_duration);
+    	timer_set_expired_time_by_sec(next_duration);
   	} 
 	else {
     	timeout_queue_head = 0;
@@ -156,7 +230,7 @@ void timer_irq_el1(){
   	
   	uart_puts("(timer_irq_el1) Current time: ");
   	uart_put_int(get_current_time());
-  	set_expired_time(2);				// timer interrupt each 2 seconds
+  	timer_set_expired_time_by_sec(2);				// timer interrupt each 2 seconds
 
 	  /*
   	uart_puts("s, ");
@@ -173,7 +247,7 @@ void timer_irq_el1(){
     	next->prev = 0;
     	timeout_queue_head = next;
     	unsigned long next_duration = next->register_time + next->duration - get_current_time();
-    	set_expired_time(next_duration);
+    	timer_set_expired_time_by_sec(next_duration);
   	} 
 	else {
     	timeout_queue_head = 0;
@@ -183,8 +257,8 @@ void timer_irq_el1(){
 	  */
 }
 
-void timer_irq_el0(){	
+void timer_irq_el0_lab3(){	
   	uart_puts("(timer_irq_el0) Current time: ");
   	uart_put_int(get_current_time());
-  	set_expired_time(2);				// timer interrupt each 2 seconds
+  	timer_set_expired_time_by_sec(2);				// timer interrupt each 2 seconds
 }
