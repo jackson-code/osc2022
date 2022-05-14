@@ -175,15 +175,14 @@ void timer_context_switch(struct trapframe *trapframe)
 }
 
 void timer_irq_el0(struct trapframe *trapframe){
-	//uart_puts("( timer.c, timer_irq_el0000() )");
-
-	//timer_context_switch(trapframe);
+	//uart_puts("( timer.c, timer_irq_el000000() )\n");
+	timer_context_switch(trapframe);
 	
 	//timer_set_expired_time_by_shift(5);
 }
 
 void timer_irq_el1(struct trapframe *trapframe){
-	//uart_puts("( timer.c, timer_irq_el1() )");
+	//uart_puts("( timer.c, timer_irq_el1() )\n");
 	timer_context_switch(trapframe);
 
 	/*

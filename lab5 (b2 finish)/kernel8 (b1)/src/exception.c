@@ -40,8 +40,8 @@ void lower_el_aarch64_irq_(unsigned long esr_el1, unsigned long elr_el1, struct 
     }
     else if(core_timer){
         timer_irq_el0(trapframe);
-		timer_set_expired_time_by_shift(5);
-		//timer_set_expired_time_by_sec(2);
+		//timer_set_expired_time_by_shift(5);
+		timer_set_expired_time_by_sec(2);
 
     }
 	enable_interrupt();
@@ -58,8 +58,8 @@ void curr_el_spx_irq_(unsigned long esr_el1, unsigned long elr_el1, struct trapf
     }
     else if(core_timer){// CNTPNIRQ
         timer_irq_el1(trapframe);
-		timer_set_expired_time_by_shift(5);
-		//timer_set_expired_time_by_sec(2);
+		//timer_set_expired_time_by_shift(5);
+		timer_set_expired_time_by_sec(2);
     }
 	enable_interrupt();
 }
@@ -75,7 +75,7 @@ void test(){}
 
 void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct trapframe* trapframe)
 {
-	disable_interrupt();
+	//disable_interrupt();
 	//uart_puts("lower_el_aarch64_sync_ \n");
 
 	unsigned long ec =  (esr_el1 >> 26) & 0x3f;	// Exception Class. Indicates the reason for the exception that this register holds information about.
@@ -92,7 +92,7 @@ void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct
 		uart_puts("\n");
 		*/
 	}
-	enable_interrupt();
+	//enable_interrupt();
 }
 
 

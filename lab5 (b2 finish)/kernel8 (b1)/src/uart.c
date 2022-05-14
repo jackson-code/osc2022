@@ -1,4 +1,7 @@
 #include "uart.h"
+#include "convert.h"
+
+int uart_interrupt = 0;
 
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
@@ -13,7 +16,6 @@ void uart_init()
     *AUX_MU_IER_REG = 0;		// disable interrupt
     *AUX_MU_LCR_REG = 3;    	// the UART works in 8-bit mode
     *AUX_MU_MCR_REG = 0;		// Don’t need auto flow control
-    //*AUX_MU_IIR_REG = 0xc6;   // disable interrupts
     *AUX_MU_BAUD_REG = 270;    	// 115200 baud rate
     *AUX_MU_IIR_REG = 6;		// no FIFO(buffer)
 
@@ -35,16 +37,25 @@ void uart_init()
     while (r--) { asm volatile("nop"); }
     *GPPUDCLK0 = 0;        	// flush GPIO setup
 
-	//#ifdef	async
+	if (uart_interrupt)
+	{
 		*AUX_MU_IER_REG = 1;   // enable receive interrupts
+	} else {
+    	*AUX_MU_IIR_REG = 0xc6;   // disable interrupts
+	}
+	
 	//#endif
 
 	*AUX_MU_CNTL_REG = 3;  // enable transmitter and receiver back
 	
-	// asynch read/write
-	read_buf_start = read_buf_end = 0;
-	write_buf_start = write_buf_end = 0;
-	enable_uart_interrupt();
+	if (uart_interrupt)
+	{
+		// asynch read/write
+		read_buf_start = read_buf_end = 0;
+		write_buf_start = write_buf_end = 0;
+		enable_uart_interrupt();
+	}
+
 	//disable_uart_interrupt();
 
 }
@@ -74,6 +85,29 @@ char uart_getc() {
     do { asm volatile("nop"); } while ( !(*AUX_MU_LSR_REG & 0x01) );
     /* read it and return */
     r = (char)(*AUX_MU_IO_REG);
+    /* convert carrige return to newline */
+    return r == '\r' ? '\n' : r;
+    //return r;
+}
+
+/**
+ * Receive a character
+ */
+char uart_getc_cannot_type() {
+    char r;
+	int delay = 100;
+    /* wait until something is in the buffer */
+    do { delay--; } while ( !(*AUX_MU_LSR_REG & 0x01) && delay > 0);
+	if (delay > 0)
+	{
+		/* read it and return */
+    	r = (char)(*AUX_MU_IO_REG);
+	} else
+	{
+		return '\0';
+	}
+	
+
     /* convert carrige return to newline */
     return r == '\r' ? '\n' : r;
     //return r;
@@ -282,32 +316,46 @@ unsigned long uart_get_string_error(char *s, int max_length){
 	return i;
 }
 
-unsigned long uart_get_string(char *s, int max_length){
+unsigned long uart_get_string_block_error(char *s, int max_length){
 	char c;
-	int i = 0;	// 1 for '\0'
+	int i = 0;
     while(1){
-    	i++;	// string length at least equal to 1, because of '\0' 
+    	i++;
         c = uart_getc();
 		*s = c;
-		/*
-        if	(*s == '\n' || *s == '\r') {
-	        //uart_send('\n');
-	        //uart_send('\r');
-			break;
-		}*/
-
-        //uart_send(c);
         s++;
-
 		if (i >= max_length) {
 			break;
         }
     }
-	//s++;
-	//*s = '\0';
 	return i;
 }
 
+unsigned long uart_get_string_error_unknown(char *s, int max_length){
+	char c;
+	int i = 0;
+    while((c = uart_getc())){
+    	i++;
+		*s = c;
+        s++;
+		if (i >= max_length) {
+			break;
+        }
+    }
+	return i;
+}
+
+
+unsigned long uart_get_string(char *s, int max_length){
+	char c;
+	int i = 0;
+    while(i < max_length){
+		*s = uart_getc_raw();
+        s++;
+		i++;
+    }
+	return i;
+}
 
 void uart_puts_bySize(char *s, int size){
     for(int i = 0; i < size ;++i){

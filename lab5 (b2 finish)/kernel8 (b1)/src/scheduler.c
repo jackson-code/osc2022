@@ -279,7 +279,6 @@ void sche_move_all_proc(enum task_status from_status, enum task_status to_status
     }
    
     circular_queue *from_q = decide_queue(from_status, sche);
-    circular_queue *to_q = decide_queue(to_status, sche);
     Task *moving = 0;
     while (from_q->beg != 0)
     {

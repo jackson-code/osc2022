@@ -1,6 +1,8 @@
 #ifndef _PROPERTY_H_
 #define _PROPERTY_H_
 
-extern int property_qemu;
+//extern 
+//int uart_interrupt = 1;
+
 
 #endif

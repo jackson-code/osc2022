@@ -5,9 +5,6 @@
 
 #include "gpio.h"
 #include "address.h"
-#include "convert.h"
-#include "printf.h"
-
 
 // mini UART registers
 // ch 2.2.2

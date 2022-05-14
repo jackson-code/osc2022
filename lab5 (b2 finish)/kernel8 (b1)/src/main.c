@@ -16,48 +16,36 @@ void __stack_chk_fail(void)
 }
 */
 
+extern int uart_interrupt;
+
 void main()
 {
-  // set uart
-  uart_init();
-  //uart_flush();    
-  //uart_puts("uart init");  
-  
-  init_memory_system();
-  cpio_init();
+	// set uart
+	uart_init();
+	//uart_flush();    
+	//uart_puts("uart init");  
+	
+ 	init_memory_system();
+  	cpio_init();
 
 	int MAXCMD = 20;
-  char cmd[MAXCMD]; 
+  	char cmd[MAXCMD]; 
     
-  #define async
-    
+	//enable_interrupt();
 
-	enable_interrupt();
-
-
-  #ifdef	async
-	enable_interrupt();
-	while(1) {
+	if (uart_interrupt)
+	{
+		enable_interrupt();
+		while(1) {
 		shell_async_get_command(cmd, MAXCMD);
 		shell_execute(cmd);
-	}	
-	#endif
-	
- 	#ifndef	async
-  while(1) {  
-    shell_get_command(cmd, MAXCMD);
-    shell_execute(cmd);
-  }
-	#endif
-
-    
-  /*
-	assert_receive_interrupt();
-	assert_transmit_interrupt();
-  while(1) {  
-      shell_async_get_command(cmd, MAXCMD);
-      shell_execute(cmd);
-  }
-  */
-
+		}	
+	}
+	else 
+	{
+		while(1) {  
+		shell_get_command(cmd, MAXCMD);
+		shell_execute(cmd);
+		}
+	}
 }

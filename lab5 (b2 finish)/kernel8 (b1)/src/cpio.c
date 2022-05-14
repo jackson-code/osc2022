@@ -3,6 +3,9 @@
 #include "uart.h"
 #include "my_string.h"
 #include "convert.h"
+#include "property.h"
+
+int property_qemu = 1;
 
 char *CPIO_ADDR = 0;
 

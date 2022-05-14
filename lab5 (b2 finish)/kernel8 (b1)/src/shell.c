@@ -1,4 +1,16 @@
 #include "shell.h"
+#include "uart.h"
+#include "mailbox.h"
+#include "my_string.h"
+#include "command.h"
+#include "cpio.h"
+#include "allocator.h"
+#include "dtb_parser.h"
+#include "el1.h"
+#include "timer.h"
+#include "exception.h"
+#include "mm.h"
+#include "thread.h"
 
 void shell_get_command(char *cmd, int lim);
 void shell_execute(char *cmd);
@@ -152,6 +164,13 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "ex")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app1.img", argv);	
+	}
+	else if (!str_cmp(keyword, "t")) {
+		core_timer_enable();
+		core_timer_enable_el1();				// video play, no ec = 0x18 error
+		timer_set_expired_time_by_shift(5);
+		char *argv[] = {"no", "argv"};
+		el1_exec("app2.img", argv);	
 	}
 	else if (!str_cmp(keyword, "b3")) {
 		/*

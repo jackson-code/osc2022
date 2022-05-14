@@ -5,6 +5,12 @@
         "scheduler.h": "c",
         "trapframe.h": "c",
         "my_string.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "uart.h": "c",
+        "gpio.h": "c",
+        "convert.h": "c",
+        "address.h": "c",
+        "allocator.h": "c",
+        "property.h": "c"
     }
 }

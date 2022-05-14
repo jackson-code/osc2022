@@ -9,6 +9,7 @@ extern scheduler sche_proc;
 
 void free_task(Task *tar);
 
+/*
 void irq_enable() {
     asm volatile("msr daifclr, #2");
 }
@@ -16,6 +17,7 @@ void irq_enable() {
 void irq_disable() {
     asm volatile("msr daifset, #2");
 }
+*/
 
 //void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 //void disable_interrupt() { asm volatile("msr DAIFSet, 0xf"); }
@@ -23,23 +25,45 @@ void irq_disable() {
 
 void sys_get_task_id(struct trapframe* trapframe) {
     //unsigned long task_id = thread_get_current()->id;
+    //disable_interrupt();
+
     Task *cur = sche_running_proc(&sche_proc);
     trapframe->x[0] = cur->id;
+
+    //enable_interrupt();
 }
 
 void sys_uart_read(struct trapframe* trapframe) {
+    //disable_interrupt();
+    //uart_puts("( sys_uart_read() ) begin\n");
+
     char* buf = (char*) trapframe->x[0];
+
+    //disable_interrupt();
+   // uart_put_hex((unsigned int)buf);
+   // uart_puts("\n");
+
     unsigned long size = trapframe->x[1];
+
+  //  uart_put_int(size);
+   // uart_puts("\n");
     
+
     int len = uart_get_string(buf, size);
 
     //irq_enable();
     //irq_disable();
     
     trapframe->x[0] = len;
+
+    //uart_puts("( sys_uart_read() ) end\n");
+    
+    //enable_interrupt();
 }
 
 void sys_uart_write(struct trapframe* trapframe) {
+    disable_interrupt();
+
     const char* buf = (char*) trapframe->x[0];
     unsigned long size = trapframe->x[1];
 
@@ -57,18 +81,27 @@ void sys_uart_write(struct trapframe* trapframe) {
 
     //irq_disable();
     trapframe->x[0] = size;
+    enable_interrupt();
+
 }
 
 void sys_mbox_call(struct trapframe* trapframe) {
+    //disable_interrupt();
+
     unsigned char ch = (unsigned char) trapframe->x[0];
     unsigned int * mailbox = (unsigned int *)trapframe->x[1];
 
     int ret = mailbox_call(ch, mailbox);
 
     trapframe->x[0] = ret;
+
+    //enable_interrupt();
+
 }
 
 void sys_fork(struct trapframe* trapframe) {
+    //disable_interrupt();
+
     uart_puts("sys_fork()\n");
     Task *child = process_fork(trapframe);
 
@@ -85,9 +118,13 @@ void sys_fork(struct trapframe* trapframe) {
 
     // run child proc
     proc_set_trapframe(&(child->trapframe), trapframe);  
+    //enable_interrupt();
+
 }
 
 void sys_exit(struct trapframe* trapframe) {
+    //disable_interrupt();
+
     int status = trapframe->x[0];                   // useless, spec require
 
     uart_puts("sys_exit()\n");
@@ -132,6 +169,9 @@ void sys_exit(struct trapframe* trapframe) {
     }
     uart_puts("\tupdate trapframe, continue to run another process\n");
     proc_set_trapframe(&(next->trapframe), trapframe);
+
+    //enable_interrupt();
+
 }
 
 
@@ -140,6 +180,8 @@ void sys_exit(struct trapframe* trapframe) {
     return value is -1
 */
 void sys_exec(struct trapframe* trapframe) {
+    //disable_interrupt();
+
     char *name = (char *)trapframe->x[0];
     char **argv = (char **)trapframe->x[1];
 
@@ -148,9 +190,13 @@ void sys_exec(struct trapframe* trapframe) {
     el1_exec(name, argv);
     
     trapframe->x[0] = 0;
+
+    //enable_interrupt();
+
 }
 
 void sys_kill(struct trapframe* trapframe){
+    //disable_interrupt();
     int id = (int)trapframe->x[0];
     uart_puts("sys_kill()\n");
 
@@ -169,30 +215,41 @@ void sys_kill(struct trapframe* trapframe){
     
     //kfree(cur->code);
     free_task(tar);
+
+    //enable_interrupt();
+
 }
 
 
 void sys_uart_write_int(struct trapframe* trapframe) {
+    //disable_interrupt();
+
     const unsigned long buf = (unsigned long) trapframe->x[0];
 
     uart_put_int(buf);
 
     //irq_disable();
     trapframe->x[0] = 0;
+    //enable_interrupt();
 }
 
 void sys_uart_write_hex(struct trapframe* trapframe) {
+    
+    //disable_interrupt();
+    
     const unsigned int buf = (unsigned int ) trapframe->x[0];
 
     uart_put_hex(buf);
 
     //irq_disable();
     trapframe->x[0] = 0;
+    //enable_interrupt();
 }
 
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
 //    uart_puts("\nsys_call.c\n");
+    enable_interrupt();
     switch (sys_call_num) {
         case SYS_GET_PID:
             sys_get_task_id(trapframe);
