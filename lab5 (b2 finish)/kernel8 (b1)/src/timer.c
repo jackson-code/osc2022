@@ -153,6 +153,9 @@ unsigned long get_current_time() {
 void timer_context_switch(struct trapframe *trapframe)
 {
 	Task *cur = sche_running_proc(&sche_proc);
+
+	proc_set_trapframe(trapframe, &(cur->trapframe));  
+
 	if (cur != 0)
 	{		
 		if (sche_proc.fork_queue->beg != 0)

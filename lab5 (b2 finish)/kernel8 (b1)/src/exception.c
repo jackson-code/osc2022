@@ -40,8 +40,8 @@ void lower_el_aarch64_irq_(unsigned long esr_el1, unsigned long elr_el1, struct 
     }
     else if(core_timer){
         timer_irq_el0(trapframe);
-		//timer_set_expired_time_by_shift(5);
-		timer_set_expired_time_by_sec(2);
+		timer_set_expired_time_by_shift(5);
+		//timer_set_expired_time_by_sec(2);
 
     }
 	enable_interrupt();
@@ -58,8 +58,8 @@ void curr_el_spx_irq_(unsigned long esr_el1, unsigned long elr_el1, struct trapf
     }
     else if(core_timer){// CNTPNIRQ
         timer_irq_el1(trapframe);
-		//timer_set_expired_time_by_shift(5);
-		timer_set_expired_time_by_sec(2);
+		timer_set_expired_time_by_shift(5);
+		//timer_set_expired_time_by_sec(2);
     }
 	enable_interrupt();
 }
