@@ -5,7 +5,7 @@
 #include "convert.h"
 #include "property.h"
 
-int property_qemu = 1;
+int property_qemu = 0;
 
 char *CPIO_ADDR = 0;
 

@@ -175,7 +175,8 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "b3")) {
 		core_timer_enable();
 		core_timer_access_by_el0();				// video play, no ec = 0x18 error
-		timer_set_expired_time_by_shift(5);
+		//timer_set_expired_time_by_shift(5);
+		timer_set_expired_time_by_sec(2);
 
 		char *argv[] = {"no", "argv"};
 		el1_exec("syscall.img", argv);	

@@ -40,8 +40,8 @@ void lower_el_aarch64_irq_(unsigned long esr_el1, unsigned long elr_el1, struct 
     }
     else if(core_timer){
         timer_irq_el0(trapframe);
-		timer_set_expired_time_by_shift(5);
-		//timer_set_expired_time_by_sec(2);
+		//timer_set_expired_time_by_shift(5);
+		timer_set_expired_time_by_sec(2);
     }
 	enable_interrupt();
 }
@@ -57,8 +57,8 @@ void curr_el_spx_irq_(unsigned long esr_el1, unsigned long elr_el1, struct trapf
     }
     else if(core_timer){// CNTPNIRQ
         timer_irq_el1(trapframe);
-		timer_set_expired_time_by_shift(5);
-		//timer_set_expired_time_by_sec(2);
+		//timer_set_expired_time_by_shift(5);
+		timer_set_expired_time_by_sec(2);
     }
 	enable_interrupt();
 }
@@ -81,12 +81,12 @@ void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct
 		unsigned long sys_call_num = trapframe->x[8];
 		sys_call_router(sys_call_num, trapframe);
 	} else {
-		/*
+		
 		uart_puts("( exception.c, lower_el_aarch64_sync_() )\n");
 		uart_puts("\tunknown ec : ");
 		uart_put_hex(ec);
 		uart_puts("\n");
-		*/
+		
 	}
 	enable_interrupt();
 }

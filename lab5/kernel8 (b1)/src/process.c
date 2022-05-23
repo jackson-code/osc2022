@@ -1,5 +1,6 @@
 #include "process.h"
 #include "my_string.h"
+#include "mm.h"
 
 
 int pid = 0;

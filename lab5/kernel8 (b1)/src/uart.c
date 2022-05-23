@@ -291,63 +291,7 @@ void uart_put_int(unsigned long num){
     }
 }
 
-
-unsigned long uart_get_string_error(char *s, int max_length){
-	char c;
-	int i = 1;	// 1 for '\0'
-    while(1){
-    	i++;	// string length at least equal to 1, because of '\0' 
-        c = uart_getc();
-        if	((*s = c) == '\n' || *s == '\r') {
-	        uart_send('\n');
-	        uart_send('\r');
-			break;
-		}
-        if (i >= max_length) {
-        	uart_puts("Exceed string max length");
-			uart_put_int(max_length);
-			break;;
-        }
-        uart_send(c);
-        s++;
-    }
-	s++;
-	*s = '\0';
-	return i;
-}
-
-unsigned long uart_get_string_block_error(char *s, int max_length){
-	char c;
-	int i = 0;
-    while(1){
-    	i++;
-        c = uart_getc();
-		*s = c;
-        s++;
-		if (i >= max_length) {
-			break;
-        }
-    }
-	return i;
-}
-
-unsigned long uart_get_string_error_unknown(char *s, int max_length){
-	char c;
-	int i = 0;
-    while((c = uart_getc())){
-    	i++;
-		*s = c;
-        s++;
-		if (i >= max_length) {
-			break;
-        }
-    }
-	return i;
-}
-
-
 unsigned long uart_get_string(char *s, int max_length){
-	char c;
 	int i = 0;
     while(i < max_length){
 		*s = uart_getc_raw();

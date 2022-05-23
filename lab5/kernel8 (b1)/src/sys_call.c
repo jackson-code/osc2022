@@ -63,7 +63,7 @@ void sys_fork(struct trapframe* trapframe) {
 }
 
 void sys_exit(struct trapframe* trapframe) {
-    int status = trapframe->x[0];                   // useless, spec require
+    //int status = trapframe->x[0];                   // useless, spec require
 
     uart_puts("sys_exit()\n");
 
@@ -164,7 +164,6 @@ void sys_uart_write_hex(struct trapframe* trapframe) {
 
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
-    //enable_interrupt();
     switch (sys_call_num) {
         case SYS_GET_PID:
             enable_interrupt();
@@ -194,7 +193,7 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
             break;
 
         case SYS_MBOX_CALL:
-            enable_interrupt();
+            //enable_interrupt();
             sys_mbox_call(trapframe);
             break;
 
