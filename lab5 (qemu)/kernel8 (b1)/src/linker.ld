@@ -26,6 +26,7 @@ SECTIONS
     	. += 0x8000;		/* stack size */
     	__stack_top = .;
     }
+    . = ALIGN(0x1000);
     __end = .;
 }
 __bss_size = (__bss_end - __bss_start)>>3;

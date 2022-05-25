@@ -1,3 +1,5 @@
+#include "my_string.h"
+
 int str_cmp(char *s, char *t)
 {
 	for ( ; *s == *t; s++, t++) {

@@ -1,4 +1,7 @@
 #include "dtb_parser.h"
+#include "uart.h"
+#include "my_string.h"
+#include "convert.h"
 
 void dt_info(){
     unsigned long *dt_addr = (unsigned long *)DT_ADDR;

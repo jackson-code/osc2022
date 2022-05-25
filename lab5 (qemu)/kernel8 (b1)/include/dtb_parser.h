@@ -1,7 +1,8 @@
+#ifndef _DTB_PARSER_H_
+#define _DTB_PARSER_H_
+
 // ref: Decivetree Specification (version17)
-#include "uart.h"
-#include "my_string.h"
-#include "convert.h"
+
 
 // defined in ch5
 #define PADDING         0x00000000
@@ -30,3 +31,5 @@ struct fdt_header {
 
 void dt_info();
 void dt_parse();
+
+#endif

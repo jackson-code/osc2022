@@ -1,7 +1,7 @@
 SECTIONS
 {
     . = 0xFFFF000000000000;
-    . = 0x80000;
+    . += 0x80000;
     __start = .;
     .text : { *(.text) }
     .rodata : { *(.rodata) }

@@ -1,6 +1,5 @@
 #include "utils.h"
-
-
+#include "uart.h"
 
 void *memset(void *s, int c, unsigned long n){
     char *xs = s;

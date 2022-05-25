@@ -3,8 +3,7 @@
 #ifndef UART_H
 #define UART_H
 
-#include "gpio.h"
-#include "address.h"
+#include "mmio.h"
 
 // mini UART registers
 // ch 2.2.2

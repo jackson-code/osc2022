@@ -9,23 +9,23 @@ _start:
 
 	bl 		from_el2_to_el1	
 	bl		set_exception_vector_table
-	
-//bss init
-	ldr x1, =__bss_start//64-bit load
-	ldr w2, =__bss_size//32-bit load
+
+	//bss init
+	ldr x1, =__bss_start	//64-bit load
+	ldr w2, =__bss_size		//32-bit load
 3:
 	cbz w2, 4f
-	str xzr, [x1], #8//64-bit store
+	str xzr, [x1], #8		//64-bit store
 	sub w2, w2, #1
 	b 3b
 
 4:
-//stack init
+	//stack init
 	ldr x1, =__stack_top
 	mov sp, x1
 
-//jump to main
-	bl main//function call
+	//jump to main
+	bl main
 	
 
 from_el2_to_el1:
@@ -35,7 +35,6 @@ from_el2_to_el1:
     msr 	spsr_el2, x0
     msr 	elr_el2, lr
     eret 						// return to EL1
-    
 
 
 

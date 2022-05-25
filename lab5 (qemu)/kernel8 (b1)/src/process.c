@@ -1,6 +1,8 @@
 #include "process.h"
 #include "my_string.h"
-
+#include "mm.h"
+#include "uart.h"
+#include "thread.h"
 
 int pid = 0;
 

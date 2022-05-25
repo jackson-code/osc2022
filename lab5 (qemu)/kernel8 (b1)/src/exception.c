@@ -1,4 +1,8 @@
 #include "exception.h"
+#include "uart.h"
+#include "timer.h"
+#include "sys_call.h"
+#include "trapframe.h"
 
 void enable_interrupt() { asm volatile("msr DAIFClr, 0xf"); }
 

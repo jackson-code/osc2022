@@ -5,8 +5,6 @@
 #include "trapframe.h"
 #include "task.h"
 
-
-
 circular_queue rq_proc;
 circular_queue dq_proc;
 circular_queue fq_proc;

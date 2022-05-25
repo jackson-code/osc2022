@@ -1,10 +1,11 @@
 #include "timer.h"
 #include "process.h"
 #include "scheduler.h"
+#include "uart.h"
+#include "el1.h"
+#include "convert.h"
+#include "allocator.h"
 
-//extern circular_queue rq_proc;
-//circular_queue dq_proc;
-//circular_queue fq_proc;
 extern scheduler sche_proc;
 
 
