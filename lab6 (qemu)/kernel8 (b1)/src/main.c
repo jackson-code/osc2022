@@ -3,6 +3,7 @@
 #include "el1.h"
 #include "exception.h"
 #include "cpio.h"
+#include "mm.h"
 
 /*
 unsigned long __stack_chk_guard;

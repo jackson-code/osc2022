@@ -1,8 +1,7 @@
 #ifndef	_MM_H
 #define	_MM_H
+
 #include "list.h"
-#include "utils.h"
-#include "property.h"
 
 extern int property_qemu;
 

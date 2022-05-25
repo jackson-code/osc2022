@@ -1,4 +1,5 @@
 #include "convert.h"
+#include "allocator.h"
 
 extern char __heap_base[];
 extern char __heap_top[];

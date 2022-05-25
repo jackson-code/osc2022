@@ -3,6 +3,7 @@
 #include "mailbox.h"
 #include "el1.h"
 #include "exception.h"
+#include "mm.h"
 
 extern scheduler sche_proc;
 
@@ -63,7 +64,7 @@ void sys_fork(struct trapframe* trapframe) {
 }
 
 void sys_exit(struct trapframe* trapframe) {
-    int status = trapframe->x[0];                   // useless, spec require
+    //int status = trapframe->x[0];                   // useless, spec require
 
     uart_puts("sys_exit()\n");
 

@@ -1,3 +1,6 @@
+#include "vm.h"
+#include "mmio.h"
+
 .section ".text"
 
 // let linker.ld start from _start
@@ -9,23 +12,33 @@ _start:
 
 	bl 		from_el2_to_el1	
 	bl		set_exception_vector_table
-	
-//bss init
-	ldr x1, =__bss_start//64-bit load
-	ldr w2, =__bss_size//32-bit load
+
+
+	//bss init
+	ldr x1, =__bss_start	//64-bit load
+	ldr w2, =__bss_size		//32-bit load
 3:
 	cbz w2, 4f
-	str xzr, [x1], #8//64-bit store
+	str xzr, [x1], #8		//64-bit store
 	sub w2, w2, #1
 	b 3b
 
 4:
-//stack init
+	//stack init
 	ldr x1, =__stack_top
 	mov sp, x1
 
-//jump to main
-	bl main//function call
+	bl		set_mmu
+	// enable MMU, cache remains disabled
+	mrs x2, sctlr_el1
+	orr x2 , x2, 1
+	msr sctlr_el1, x2 
+
+    // indirect branch
+    ldr     x0, = main
+    br      x0
+	//jump to main
+	//bl main
 	
 
 from_el2_to_el1:
@@ -36,6 +49,84 @@ from_el2_to_el1:
     msr 	elr_el2, lr
     eret 						// return to EL1
     
+set_mmu:
+	// set translation control register
+	ldr x0, = TCR_CONFIG_DEFAULT
+    msr tcr_el1, x0
+
+	// set Memory Attribute Indirection Register
+	ldr x0, = MAIR_ATTR
+	msr mair_el1, x0
+
+	// identity paging
+	ldr x0, = pgd_virt        
+	lsl x0, x0, #16
+	lsr x0, x0, #16			// PGD's phys addr 
+	ldr x1, = pud_virt        
+	lsl x1, x1, #16
+	lsr x1, x1, #16			// PUD's phys addr
+	ldr x2, = pmd_virt        
+	lsl x2, x2, #16
+	lsr x2, x2, #16			// PMD's phys addr 
+	ldr x3, = pte_virt        
+	lsl x3, x3, #16
+	lsr x3, x3, #16			// PTE's phys addr
+
+	// set PGD
+	ldr x4, = PGD_ATTR
+	orr x4, x4, x1			// combine the physical address of next level page with attribute.
+	str x4, [x0]
+ 
+	// set PUD0
+	ldr x4, = PUD_TABLE_ATTR
+	orr x4, x4, x2
+	str x4, [x1]			// 1st entry of pud
+
+	// set PUD1 (MAYBE CAN DELETE THIS ONE???)
+	ldr x4, = PUD_DEVICE_ATTR
+	mov x5, 0x40000000		// 1GB
+	orr x4, x4, x5
+	str x4, [x1, #8]		// 2nd entry of pud
+
+	// set PMD point to PTE 
+	mov x5, x3				// x5 = PTE phys addr
+	mov x6, xzr				// i = 0
+set_PMD:
+	ldr x4, = PMD_TABLE_ATTR
+	orr x4, x4, x5
+	str x4, [x2], #8		
+	add x5, x5, #4096		// next PTE table in next 4KB 
+	add x6, x6, #1
+	cmp x6, #512			// PMD has 512 entry 
+	b.ls set_PMD
+	
+	// Peripheral start from 0X3f00,0000
+	mov x5, #MMIO_PHYS_START
+	mov x6, xzr				// phys addr
+set_normal_PTE:
+	// set NORMAL PTE point to phys addr (below 0x3f00,0000)
+	ldr x4, = PTE_NORMAL_ATTR
+	orr x4, x4, x6
+	str x4, [x3], #8
+	add x6, x6, #4096
+	cmp x6, x5
+	b.ls set_normal_PTE
+
+	// Peripheral end to 0X4000,0000
+	mov x5, #MMIO_PHYS_END
+set_device_PTE:
+	// set device PTE point to phys addr (below 0x3f00,0000)
+	ldr x4, = PTE_DEVICE_ATTR
+	orr x4, x4, x6
+	str x4, [x3], #8
+	add x6, x6, #4096
+	cmp x6, x5
+	b.ls set_device_PTE
+
+	msr ttbr0_el1, x0 // load PGD to the bottom translation-based register.
+	msr ttbr1_el1, x0 // load PGD to the upper  translation-based register.
+
+	ret
 
 
 

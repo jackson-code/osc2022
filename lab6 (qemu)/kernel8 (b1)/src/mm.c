@@ -1,4 +1,8 @@
 #include "mm.h"
+#include "utils.h"
+#include "property.h"
+#include "uart.h"
+
 //#define debug
 
 extern unsigned char __start, __end;

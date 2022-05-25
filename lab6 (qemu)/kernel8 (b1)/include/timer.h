@@ -1,11 +1,8 @@
 #ifndef __TIMER_H__
 #define __TIMER_H__
 
-#include "uart.h"
-#include "el1.h"
-#include "convert.h"
-#include "allocator.h"
 #include "trapframe.h"
+
 
 // #define TIME_FREQ 0x03b9aca0
 

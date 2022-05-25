@@ -7,17 +7,4 @@ unsigned long ahtoi(char* addr, const int size);
 unsigned int btol(unsigned int num);
 unsigned int atoui(char *s);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #endif

@@ -1,4 +1,6 @@
 #include "scheduler.h"
+#include "thread.h"
+#include "uart.h"
 
 //#define debug
 

@@ -1,8 +1,6 @@
 #ifndef _SCHEDULER_H
 #define _SCHEDULER_H
 
-#include "thread.h"
-#include "uart.h"
 #include "task.h"
 
 typedef struct circular_queue {

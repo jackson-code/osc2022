@@ -3,6 +3,10 @@
 #include "task.h"
 #include "process.h"
 #include "scheduler.h"
+#include "cpio.h"
+#include "uart.h"
+#include "my_string.h"
+#include "mm.h"
 
 void el1_switch_el0(unsigned long sp, unsigned long *code_start_addr);
 
