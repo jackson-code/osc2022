@@ -127,13 +127,13 @@ char uart_getc_raw() {
 /**
  * Display a binary value in hexadecimal
  */
-void uart_put_hex(unsigned int d)
+void uart_put_hex(unsigned long d)
 {
-    unsigned int n;
+    unsigned long n;
     int c;
-    for(c = 28; c >= 0; c -= 4) {
+    for(c = 60; c >= 0; c -= 4) {
         // get highest tetrad
-        n = (d>>c) & 0xF;
+        n = (d >> c) & 0xF;
         // 0-9 => '0'-'9', 10-15 => 'A'-'F'
         n += n > 9 ? 0x37 : 0x30;
         uart_send(n);

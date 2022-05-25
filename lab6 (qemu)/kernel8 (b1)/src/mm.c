@@ -51,32 +51,40 @@ int reserve_mem(unsigned long addr, unsigned long size) {
 
 // a3
 // just simply hardcode memory information (You can either get the it from the devicetree)
+// have to record "phys addr"!!!
 void init_startup(){
+  uart_puts("( mm.c, init_startup() )\n");
+
 	reserve_count = 0;
-	//uart_puts("reserve spin table\n");
+	uart_puts("\treserve spin table\n");
 	reserve_mem(0x0, 0x1000);  														// spin table
-	//uart_puts("spin table reserve finish\n");
+	uart_puts("\tspin table reserve finish\n");
 
   //reserve_mem(0x20000, 0x10000);
 
 	reserve_mem(0x30000, 0x20000);  														// app2 (user program)
 	reserve_mem(0x60000, 0x10000);  														// bootloader 
 
-	//uart_puts("reserve kernel\n");
-	reserve_mem((unsigned long)&__start, (unsigned long)(&__end - &__start)); 		// kernel
-	//uart_puts("kernel reserve finish\n");
-	//uart_puts("reserve buddy system\n");
-	reserve_mem((unsigned long)&__end, mem_size / PAGE_SIZE);     					// buddy system
-	//uart_puts("buddy system reserve finish\n");
-	//uart_puts("reserve cpio\n");
+	uart_puts("\treserve kernel\n");
+  unsigned long phys_beg = ((unsigned long)(&__start) << 16) >> 16; // convert virt to phys addr
+  unsigned long phys_end = ((unsigned long)(&__end) << 16) >> 16;
+	reserve_mem((unsigned long)phys_beg, (unsigned long)(&__end - &__start)); 		// kernel
+	uart_puts("\tkernel reserve finish\n");
+
+	uart_puts("\treserve buddy system\n");
+	reserve_mem((unsigned long)phys_end, mem_size / PAGE_SIZE);   // buddy system
+	uart_puts("\tbuddy system reserve finish\n");
+	
+  uart_puts("\treserve cpio\n");
   if (property_qemu)
     reserve_mem(0x8000000,0x10000000);												// cpio when using QEMU
   else
 	  reserve_mem(0x20000000,0x10000000);												// cpio
-	//uart_puts("cpio reserve finish\n");
-	//uart_puts("reserve dtb\n");
-	reserve_mem(0x31000000,0x1000000);                  							// dtb
-	//uart_puts("dtb reserve finish\n");
+	uart_puts("\tcpio reserve finish\n");
+	
+  uart_puts("\treserve dtb\n");
+	reserve_mem(0x31000000,0x1000000);                  				// dtb
+	uart_puts("\tdtb reserve finish\n");
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //                                          init                                              // 
@@ -145,7 +153,7 @@ void init_buddy(unsigned long stat_ptr) {
   	// and add to the free list
     place_buddy(mem_itr, startup.addr[i], BUDDY_FREE);
 	
-	// mark the reserve physical addr RESRVE_USE in the buddy_stat
+		// mark the reserve physical addr RESRVE_USE in the buddy_stat
     place_buddy(startup.addr[i], startup.addr[i] + startup.size[i], RESRVE_USE);
   
     mem_itr = startup.addr[i] + startup.size[i];
@@ -291,7 +299,7 @@ void *alloc_page(unsigned int size) {
     #endif
 
     uart_puts("\talloc addr = 0x");	
-    uart_put_hex((unsigned int)new_chunk);
+    uart_put_hex((unsigned long)new_chunk);
     uart_puts("\n");
 
     return new_chunk;

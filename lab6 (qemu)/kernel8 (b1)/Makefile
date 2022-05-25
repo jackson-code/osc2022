@@ -30,8 +30,8 @@ OBJ_FILES += $(C_FILES:$(SRC_DIR)/%.c=$(BUILD_DIR)/%_c.o)
 
 
 $(KERNEL).img: $(SRC_DIR)/$(Linker) $(OBJ_FILES)
-	$(ARMGNU)-ld -T $(SRC_DIR)/$(Linker) -o $(BUILD_DIR)/$(KERNEL).elf  $(OBJ_FILES)
-	$(ARMGNU)-objcopy $(BUILD_DIR)/$(KERNEL).elf -O binary $(KERNEL).img
+	$(ARMGNU)-ld -T $(SRC_DIR)/$(Linker) -o $(KERNEL).elf  $(OBJ_FILES)
+	$(ARMGNU)-objcopy $(KERNEL).elf -O binary $(KERNEL).img
 	
 run:
 	$(QEMU) -M raspi3 -kernel $(KERNEL).img  $(MINI-UART)

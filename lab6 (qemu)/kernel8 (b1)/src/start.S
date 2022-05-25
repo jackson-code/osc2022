@@ -7,8 +7,8 @@
 .global _start
 
 _start:
-    //ldr		x1, =0x100000
-    //str		x0, [x1]            // store dtb loading address to 0x100000
+    ldr		x1, =0x100000
+    str		x0, [x1]            // store dtb loading address to 0x100000
 
 	bl 		from_el2_to_el1	
 	bl		set_exception_vector_table

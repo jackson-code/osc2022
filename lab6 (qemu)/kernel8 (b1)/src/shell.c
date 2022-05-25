@@ -139,6 +139,9 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "buddy")) {
 		print_buddy_info();
 	}
+	else if (!str_cmp(keyword, "tb")) {
+		test_buddy();
+	}
 	else if (!str_cmp(keyword, "slab")) {
 		print_slab();
 	}
@@ -154,18 +157,18 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "demo_kfree")) {
 		demo_kfree();
 	}
-	else if (!str_cmp(keyword, "b1")) {
+	else if (!str_cmp(keyword, "lab5_b1")) {
 		threadTest1();
 	}
-	else if (!str_cmp(keyword, "b2")) {
+	else if (!str_cmp(keyword, "lab5_b2")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app2.img", argv);	
 	}
-	else if (!str_cmp(keyword, "ex")) {
+	else if (!str_cmp(keyword, "lab5_ex")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app1.img", argv);	
 	}
-	else if (!str_cmp(keyword, "t")) {
+	else if (!str_cmp(keyword, "lab5_b3_test_my_cpio")) {
 		core_timer_enable();
 		core_timer_access_by_el0();				// video play, no ec = 0x18 error
 		timer_set_expired_time_by_shift(5);
@@ -179,6 +182,10 @@ void shell_execute(char *cmd)
 
 		char *argv[] = {"no", "argv"};
 		el1_exec("syscall.img", argv);	
+	}
+	else if (!str_cmp(keyword, "b2")) {
+		char *argv[] = {"no", "argv"};
+		el1_exec("app2.img", argv);	
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");
