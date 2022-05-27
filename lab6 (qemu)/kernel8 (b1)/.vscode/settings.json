@@ -12,6 +12,7 @@
         "address.h": "c",
         "allocator.h": "c",
         "property.h": "c",
-        "mmio.h": "c"
+        "mmio.h": "c",
+        "task.h": "c"
     }
 }

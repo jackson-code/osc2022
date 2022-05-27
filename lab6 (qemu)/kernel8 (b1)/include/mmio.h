@@ -1,7 +1,7 @@
 #ifndef _MMIO_H_
 #define _MMIO_H_
 
-#include "vm.h"
+#include "mmu.h"
 
 // ch 1.2.3 (physical address)
 #define MMIO_PHYS_START     (0x3F000000)

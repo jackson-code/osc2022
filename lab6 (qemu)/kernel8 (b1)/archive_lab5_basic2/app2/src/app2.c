@@ -8,16 +8,17 @@ void delay(unsigned long num)
 //#define BUF_MAX 500
 
 void main(void) {
-    char buf[500];
-    unsigned long len = uartread(buf, 500);
-    uartwrite("uartread test\n", 15);
-    uartwrite(buf, len);
-    uartwrite("len : ", 7);
-    uart_write_int(len);
-    uartwrite("\n", 2);
+    //char buf[500];
+    //unsigned long len = uartread(buf, 500);
+    //uartwrite("uartread test\n", 15);
+    //uartwrite(buf, len);
+    //uartwrite("len : ", 7);
+    //uart_write_int(len);
+    //uartwrite("\n", 2);
 
     //uartwrite("mbox test\n", 15);
     //mailbox_get_arm_memory();
+		uartwrite("app2", 5);
 
     long long cur_sp;
     asm volatile("mov %0, sp" : "=r"(cur_sp));   

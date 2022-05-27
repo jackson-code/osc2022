@@ -7,8 +7,9 @@
 #include "uart.h"
 #include "my_string.h"
 #include "mm.h"
+#include "vm.h"
 
-void el1_switch_el0(unsigned long sp, unsigned long *code_start_addr);
+void el1_switch_el0(Task *proc);
 
 // lab3
 void el1_switch_to_el0(char * img_name)
@@ -90,11 +91,11 @@ void el1_exec(char *img_name, char *argv[])
 		uart_puts("ERROR in el1.c, el1_switch_to_el0(): no file");
 	}
 	else {
-		el1_switch_el0(process->reg.sp, process->code);
+		el1_switch_el0(process);
 	}
 }
 
-void el1_switch_el0(unsigned long sp, unsigned long *code_start_addr)
+void el1_switch_el0(Task *proc)
 {
 	uart_puts("( el1.c, el1_switch_el0 ) begin\n");
 
@@ -106,9 +107,14 @@ void el1_switch_el0(unsigned long sp, unsigned long *code_start_addr)
 	asm volatile("msr	spsr_el1, x0	\n");
 	
 	// set stack pointer
-	asm volatile("msr	sp_el0, %0		\n"::"r"(sp));
+	asm volatile("msr	sp_el0, %0		\n"::"r"(proc->reg.sp));
 	
 	// set return address, return to the user.S
-	asm volatile("msr	elr_el1, %0		\n"::"r"(code_start_addr));
+	asm volatile("msr	elr_el1, %0		\n"::"r"(proc->code));
+
+
+	// context switch
+	update_pgd((unsigned long)proc->mm.pgd);
+
 	asm volatile("eret					\n");
 }

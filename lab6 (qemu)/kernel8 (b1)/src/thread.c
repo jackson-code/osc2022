@@ -35,22 +35,23 @@ void thread_schedule(){
 }
 
 Task* thread_create(void* func){
+	uart_puts("thead_create() begin\n");
 	Task* new_task=(Task*)kmalloc(TASKSIZE);
-	if((unsigned long)new_task%TASKSIZE){//aligned
+	if((unsigned long)new_task % TASKSIZE){//aligned
 		uart_puts("new_task isn't aligned!!\n");
 		while(1){}
 	}
 	
-	uart_puts("thead_create, assign fp, lr, sp\n");
-	new_task->reg.fp = (unsigned long)new_task + TASKSIZE;
+	//new_task->reg.fp = (unsigned long)new_task + TASKSIZE;
 	new_task->reg.lr = (unsigned long)func;
-	new_task->reg.sp = (unsigned long)new_task + TASKSIZE;
+	//new_task->reg.sp = (unsigned long)new_task + TASKSIZE;
 
 	new_task->id = task_id++;
 	new_task->status = TASK_RUN;
 	new_task->a_addr = new_task->a_size = 0;
 	new_task->child = new_task->parent = new_task->next = (Task *)0;	
-
+	
+	uart_puts("thead_create() end\n");
 	return new_task;
 }
 
