@@ -6,6 +6,10 @@
 //----------------------------------------------------------//
 //                     virtual file system                  //
 //----------------------------------------------------------//
+
+// flag
+#define O_CREAT (1)
+
 typedef struct vnode {
   //struct mount* mount;
   struct dentry *dentry;  
@@ -76,6 +80,7 @@ int vfs_read(struct file* file, void* buf, unsigned long len);
 int vfs_mkdir(const char* pathname);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
+int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 
 
 //----------------------------------------------------------//

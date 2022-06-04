@@ -3,6 +3,18 @@
 #include "my_string.h"
 #include "uart.h"
 
+char *get_component_name(const char *pathname) {
+    int len = str_len(pathname);
+    char *res;
+    int idx = len - 1;  // begin from last char
+    while (*(pathname + idx) != '/' || idx > 0)
+    {
+        *res++ = *(pathname + idx);
+        idx++;
+    }
+    *res = '\0';
+    return res;
+}
 
 //----------------------------------------------------------//
 //                     virtual file system                  //
@@ -41,13 +53,29 @@ int register_filesystem(struct filesystem* fs) {
 
 //---------- file operation ----------//
 
-int vfs_open(const char* pathname, int flags, struct file** target) {
-  // 1. Lookup pathname
-  // 2. Create a new file handle for this vnode if found.
-  // 3. Create a new file if O_CREAT is specified in flags and vnode not found
-  // lookup error code shows if file exist or not or other error occurs
-  // 4. Return error code if fails
-  return 0;
+int vfs_open(const char* pathname, int flags, file_t** file_tar) {
+    vnode_t *v_tar;
+    // 1. Lookup pathname
+    int result = vfs_lookup(pathname, &v_tar);
+    // 2. Create a new file handle for this vnode if found.
+    char *component_name = get_component_name(pathname);
+    if (result == 0)
+    {
+        vfs_create(v_tar, &v_tar, component_name);
+    } else
+    // 3. Create a new file if O_CREAT is specified in flags and vnode not found
+    // lookup error code shows if file exist or not or other error occurs
+    {
+        if (flags == O_CREAT)
+        {
+            vnode_t* new_node;
+            vfs_create(v_tar, &new_node, component_name);
+        }
+    }
+
+    // 4. Return error code if fails        
+
+    return 0;
 }
 
 int vfs_close(struct file* file) {
@@ -72,9 +100,15 @@ int vfs_read(struct file* file, void* buf, unsigned long len) {
 
 
 //---------- vnode operation ----------//
-
-
-
+int vfs_mkdir(const char* pathname) {
+    return 0;
+}
+int vfs_lookup(const char* pathname, vnode_t** v_tar) {
+    return rootfs->root->v_ops->lookup(rootfs->root, v_tar, pathname);
+}
+int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    return rootfs->root->v_ops->create(dir_node, v_tar, component_name);
+}
 
 //----------------------------------------------------------//
 //                         tmpfs                            //
@@ -160,14 +194,62 @@ int tmpfs_close(file_t* file) {
 
 
 //---------- vnode operation ----------//
-int tmpfs_lookup(vnode_t* dir_node, vnode_t** target, const char* component_name) {
+int tmpfs_taversal(vnode_t *cur, const char* pathname, vnode_t** v_tar) {
+    char *component;
+    while (*pathname != '/' || *pathname != '\0')
+    {
+        *component++ = *pathname++;
+    }
+    component = '\0';
 
-  return 0;
+    v_tar = &cur;
+
+    if (*pathname == '\0')  // last component in path
+    {
+        return 0;
+    }
+    
+    // finding in child
+    for (list_head *subdir = cur->dentry->d_subdirs.next; subdir != &cur->dentry->d_subdirs; subdir = subdir->next)
+    {
+        struct dentry* d_child = list_entry(subdir, struct dentry, d_siblings);
+        if (!str_cmp(d_child->name, component))
+        {
+            return tmpfs_taversal(d_child->vnode, ++pathname, v_tar);
+        }
+        else    // can't find in child
+        {
+            return -1;
+        }
+    }
+    return -1;
+}
+int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* pathname) {
+    if (pathname[0] == '/')     // absulute path
+    {
+        return tmpfs_taversal(rootfs->root, ++pathname, v_tar);
+    }
+    else    // relative path
+    {
+        return -1;
+    }    
 }
 
 int tmpfs_create(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-
-  return 0;
+    if (target == 0)
+    {
+        vnode_t *new = tmpfs_create_vnode();
+        target = &new;
+        tmpfs_create_vnode(target, component_name, dir_node);
+    }
+    else
+    {
+        file_t* fd = (file_t *)kmalloc(sizeof(file_t));
+        fd->vnode = *target;
+        fd->f_ops = (*target)->f_ops;
+        fd->f_pos = 0;
+    }
+    return 0; 
 }
 
 int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
