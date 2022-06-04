@@ -106,15 +106,22 @@ void el1_switch_el0(Task *proc)
 	asm volatile("mov	x0, 0x340		\n");		// using sp_el0, interrupt enable
 	asm volatile("msr	spsr_el1, x0	\n");
 	
+
 	// set stack pointer
 	asm volatile("msr	sp_el0, %0		\n"::"r"(proc->reg.sp));
+	//asm volatile("msr	sp_el0, %0		\n"::"r"(0xc000));
 	
 	// set return address, return to the user.S
 	asm volatile("msr	elr_el1, %0		\n"::"r"(proc->code));
+	//asm volatile("msr	elr_el1, %0		\n"::"r"(0x4000));
+	//asm volatile("msr	elr_el1, %0		\n"::"r"(0x80000));
 
 
 	// context switch
 	update_pgd((unsigned long)proc->mm.pgd);
+	//update_pgd(*(proc->mm.pgd));
+
+
 
 	asm volatile("eret					\n");
 }
