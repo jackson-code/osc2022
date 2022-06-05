@@ -3,7 +3,7 @@
 #include "my_string.h"
 #include "uart.h"
 
-char *get_component_name(const char *pathname) {
+char *get_last_component_name(const char *pathname) {
     int len = str_len(pathname);
     char *res;
     int idx = len - 1;  // begin from last char
@@ -54,22 +54,22 @@ int register_filesystem(struct filesystem* fs) {
 //---------- file operation ----------//
 
 int vfs_open(const char* pathname, int flags, file_t** file_tar) {
-    vnode_t *v_tar;
+    vnode_t *dir_node;
     // 1. Lookup pathname
-    int result = vfs_lookup(pathname, &v_tar);
+    int ret = vfs_lookup(pathname, &dir_node);
     // 2. Create a new file handle for this vnode if found.
-    char *component_name = get_component_name(pathname);
-    if (result == 0)
+    char *file_name = get_last_component_name(pathname);
+    if (ret == 0)
     {
-        vfs_create(v_tar, &v_tar, component_name);
+        vfs_create(dir_node, &dir_node, file_name);
     } else
-    // 3. Create a new file if O_CREAT is specified in flags and vnode not found
+    // 3. Create a new file(and vnode, dentry) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
     {
         if (flags == O_CREAT)
         {
             vnode_t* new_node;
-            vfs_create(v_tar, &new_node, component_name);
+            vfs_create(dir_node, &new_node, file_name);
         }
     }
 
@@ -104,7 +104,34 @@ int vfs_mkdir(const char* pathname) {
     return 0;
 }
 int vfs_lookup(const char* pathname, vnode_t** v_tar) {
-    return rootfs->root->v_ops->lookup(rootfs->root, v_tar, pathname);
+    // get component name
+	int comp_count = str_token_count(pathname, '/');
+	char *comp_names[comp_count];
+    int max_name_len = 64;
+	for (int j = 0; j < comp_count; j++) {
+		comp_names[j] = (char *)kmalloc(max_name_len);
+	}
+    str_token(pathname, comp_names, '/');
+    
+    if (pathname[0] == '/')     // absulute path
+    {
+        vnode_t *vnode_itr = rootfs->root;
+        for (int i = 0; i < comp_count; i++) {
+            vnode_t *next_vnode;
+            int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
+            if(ret != 0) {
+                *v_tar = vnode_itr;     // return directory node
+                return ret;             // can't find
+            }
+            vnode_itr = next_vnode;
+        }
+        *v_tar = vnode_itr;
+        return 0;
+    }
+    else    // relative path
+    {
+        return 1111;
+    }    
 }
 int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
     return rootfs->root->v_ops->create(dir_node, v_tar, component_name);
@@ -135,7 +162,7 @@ int tmpfs_register() {
 int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs) {
     rootfs->fs = tmpfs;
     rootfs->root = tmpfs_create_vnode();
-    tmpfs_create_dentry(rootfs->root, "/", 0);
+    tmpfs_create_dentry(rootfs->root, "/", 0, DIRECTORY);
     return 0;
 }
 
@@ -152,11 +179,12 @@ vnode_t *tmpfs_create_vnode() {
 /*
     call tmpfs_create_vnode() first, then call this one
 */
-dentry_t *tmpfs_create_dentry(vnode_t *v, const char *name, dentry_t *parent) {
+dentry_t *tmpfs_create_dentry(vnode_t *v, const char *name, dentry_t *parent, enum dentry_type d_type) {
     dentry_t *d = (dentry_t *)kmalloc(sizeof(dentry_t));
     str_cpy(d->name, name);
     d->vnode =  v;
     v->dentry = d;
+    d->type = d_type;
     list_init(&d->d_subdirs);
     list_init(&d->d_siblings);
     d->parent = parent;
@@ -224,31 +252,34 @@ int tmpfs_taversal(vnode_t *cur, const char* pathname, vnode_t** v_tar) {
     }
     return -1;
 }
-int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* pathname) {
-    if (pathname[0] == '/')     // absulute path
+int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    // finding file's dentry in child
+    for (list_head *subdir = dir_node->dentry->d_subdirs.next; subdir != &dir_node->dentry->d_subdirs; subdir = subdir->next)
     {
-        return tmpfs_taversal(rootfs->root, ++pathname, v_tar);
+        struct dentry* d_child = list_entry(subdir, struct dentry, d_siblings);
+        if (!str_cmp(d_child->name, component_name))
+        {
+            *v_tar = d_child->vnode;
+            return 0;
+        }
     }
-    else    // relative path
-    {
-        return -1;
-    }    
+    return -1;
 }
 
-int tmpfs_create(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-    if (target == 0)
+int tmpfs_create(vnode_t* dir_node, vnode_t** target, const char* file_name) {
+    if (target == 0)    // the file's vnode & dentry not existing
     {
         vnode_t *new = tmpfs_create_vnode();
         target = &new;
-        tmpfs_create_vnode(target, component_name, dir_node);
+        tmpfs_create_dentry(new, file_name, dir_node->dentry, REGULAR_FILE);
     }
-    else
-    {
-        file_t* fd = (file_t *)kmalloc(sizeof(file_t));
-        fd->vnode = *target;
-        fd->f_ops = (*target)->f_ops;
-        fd->f_pos = 0;
-    }
+
+    file_t* fd = (file_t *)kmalloc(sizeof(file_t));
+    fd->vnode = *target;
+    fd->dentry = (*target)->dentry;
+    fd->f_ops = (*target)->f_ops;
+    fd->f_pos = 0;
+
     return 0; 
 }
 

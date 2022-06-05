@@ -11,6 +11,7 @@
 #include "exception.h"
 #include "mm.h"
 #include "thread.h"
+#include "vfs.h"
 
 void shell_get_command(char *cmd, int lim);
 void shell_execute(char *cmd);
@@ -52,13 +53,13 @@ void shell_execute(char *cmd)
 		return;
 	
 	// get args
-	int token_num = str_token_count(cmd);
+	int token_num = str_token_count(cmd, ' ');
 	char *tokens[token_num];
 	for (int j = 0; j < token_num; j++) {
 		tokens[j] = simple_alloc(10);
-		str_token(cmd, j, tokens[j]);
 	}
-	
+	str_token(cmd, tokens, ' ');
+
 	// debug
 	/*
 	int i = 0;
@@ -154,31 +155,34 @@ void shell_execute(char *cmd)
 	else if (!str_cmp(keyword, "demo_kfree")) {
 		demo_kfree();
 	}
-	else if (!str_cmp(keyword, "b1")) {
+	else if (!str_cmp(keyword, "lab5_b1")) {
 		threadTest1();
 	}
-	else if (!str_cmp(keyword, "b2")) {
+	else if (!str_cmp(keyword, "lab5_b2")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app2.img", argv);	
 	}
-	else if (!str_cmp(keyword, "ex")) {
+	else if (!str_cmp(keyword, "lab5_exec_test")) {
 		char *argv[] = {"no", "argv"};
 		el1_exec("app1.img", argv);	
 	}
-	else if (!str_cmp(keyword, "t")) {
+	else if (!str_cmp(keyword, "lab5_timer_context_switch")) {
 		core_timer_enable();
 		core_timer_access_by_el0();				// video play, no ec = 0x18 error
 		timer_set_expired_time_by_shift(5);
 		char *argv[] = {"no", "argv"};
 		el1_exec("app2.img", argv);	
 	}
-	else if (!str_cmp(keyword, "b3")) {
+	else if (!str_cmp(keyword, "lab5_b3")) {
 		core_timer_enable();
 		core_timer_access_by_el0();				// video play, no ec = 0x18 error
 		timer_set_expired_time_by_shift(5);
 
 		char *argv[] = {"no", "argv"};
 		el1_exec("syscall.img", argv);	
+	}
+	else if (!str_cmp(keyword, "b1")) {
+		
 	}
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "sys_call.h": "c",
+        "mbox.h": "c"
+    }
+}

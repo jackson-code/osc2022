@@ -13,10 +13,16 @@
 typedef struct vnode {
   //struct mount* mount;
   struct dentry *dentry;  
+  //struct file *file;
   struct vnode_operations* v_ops;
   struct file_operations* f_ops;
   void* internal;
 }vnode_t;
+
+enum dentry_type {
+    REGULAR_FILE = 1,
+    DIRECTORY = 2,
+};
 
 typedef struct dentry {
     char name[64];
@@ -26,7 +32,7 @@ typedef struct dentry {
     struct list_head d_siblings;    // child of parent list
     struct list_head d_subdirs;     // our children
     struct vnode* vnode;
-    //int type;
+    enum dentry_type type;
     //struct mount* mountpoint;
     //struct dentry* mount_origin;
 }dentry_t;
@@ -34,10 +40,11 @@ typedef struct dentry {
 
 // file handle
 typedef struct file {
-  struct vnode* vnode;
-  unsigned long f_pos;  // RW position of this file handle
-  struct file_operations* f_ops;
-  int flags;
+    struct vnode *vnode;
+    struct dentry *dentry;
+    unsigned long f_pos;  // RW position of this file handle
+    struct file_operations* f_ops;
+    int flags;
 }file_t;
 
 struct mount {
@@ -89,7 +96,7 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 int tmpfs_register();
 int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs);
 vnode_t *tmpfs_create_vnode();
-dentry_t *tmpfs_create_dentry(vnode_t *v, const char *name, dentry_t *parent);
+dentry_t *tmpfs_create_dentry(vnode_t *v, const char *name, dentry_t *parent, enum dentry_type d_type);
 //---------- file operation ----------//
 int tmpfs_write(file_t* file, const void* buf, unsigned long len);
 int tmpfs_read(file_t* file, void* buf, unsigned long len);

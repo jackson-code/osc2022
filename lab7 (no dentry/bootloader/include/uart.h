@@ -1,0 +1,10 @@
+void	uart_init();
+void	uart_flush();
+void	uart_send(unsigned int c);
+char	uart_getc();
+char	uart_getc_raw();
+void 	uart_hex(unsigned int d);
+void 	uart_printf(char *fmt, ...);
+int 	uart_get_int();
+void 	uart_get_string(char *s, int max_length);
+void 	uart_puts_bySize(char *s, int size);
