@@ -3,6 +3,8 @@
 
 #include "list.h"
 
+#define EOF   (-1)
+
 //----------------------------------------------------------//
 //                     virtual file system                  //
 //----------------------------------------------------------//
@@ -29,21 +31,10 @@ typedef struct vnode {
     struct list_head subdirs;     // our children
 }vnode_t;
 
-
-
-// typedef struct dentry {
-//     char name[64];
-//     struct dentry* parent;          // parent directory
-//     //struct list_head list;        
-//     //struct list_head childs;      // our children
-//     struct list_head d_siblings;    // child of parent list
-//     struct list_head d_subdirs;     // our children
-//     struct vnode* vnode;
-//     enum dentry_type type;
-//     //struct mount* mountpoint;
-//     //struct dentry* mount_origin;
-// }dentry_t;
-
+enum file_status {
+    FILE_EXIST = 1,
+    FILE_NOT_EXIST = 2,
+};
 
 // file handle
 typedef struct file {
@@ -51,6 +42,8 @@ typedef struct file {
     unsigned long f_pos;  // RW position of this file handle
     struct file_operations* f_ops;
     int flags;
+    unsigned long size;
+    enum file_status status;
 }file_t;
 
 struct mount {
@@ -99,6 +92,14 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 //----------------------------------------------------------//
 //                         tmpfs                            //
 //----------------------------------------------------------//
+#define TMPFS_MAX_FILE_SIZE (4096)  // 4KB
+
+typedef struct internal_tmpfs {
+   char *file_content;
+    // char buf[TMPFS_MAX_FILE_SIZE];
+}inter_tmpfs_t;
+
+
 int tmpfs_register();
 int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs);
 vnode_t *tmpfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type);

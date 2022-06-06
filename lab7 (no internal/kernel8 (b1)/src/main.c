@@ -31,6 +31,9 @@ void main()
 
 	rootfs_init();
 
+	// test basic
+
+
 	int MAXCMD = 20;
   	char cmd[MAXCMD]; 
     
