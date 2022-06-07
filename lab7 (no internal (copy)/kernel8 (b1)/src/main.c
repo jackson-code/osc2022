@@ -31,16 +31,35 @@ void main()
 
 	rootfs_init();
 
-	// test basic
-	file_t **fd = 0;
-	vfs_open("/ab", O_CREAT, fd);
-	vfs_open("/ab", O_CREAT, fd);
+	// test basic 2
+	vfs_mkdir("/1-a");
+	vfs_mkdir("/1-b");
+	vfs_mkdir("/1-a/2-a1");
+	vfs_mkdir("/1-a/2-a2");
+	vfs_mkdir("/1-b/2-b1");
 
-	char *buf = "apple";
-	vfs_write(*fd, buf, 123);
+	vfs_mount("2-b1", "tmpfs");
 
-	vfs_open("/ab", O_CREAT, fd);
-	vfs_open("/ab", O_CREAT, fd);
+	// file_t *fd = (file_t *)kmalloc(sizeof(file_t));
+	// vfs_open("/ab", O_CREAT, &fd);
+	// vfs_open("/ab", O_CREAT, &fd);
+	// vfs_close(fd);
+
+	// char *buf_write = "apple";
+	// char buf_read[4096]; 
+
+	// fd = (file_t *)kmalloc(sizeof(file_t));
+	// vfs_open("/ab", O_CREAT, &fd);
+	// vfs_open("/ab", O_CREAT, &fd);
+
+	// vfs_write(fd, buf_write, 123);
+	// vfs_close(fd);
+
+	// fd = (file_t *)kmalloc(sizeof(file_t));
+	// vfs_open("/ab", O_CREAT, &fd);
+	// vfs_read(fd, buf_read, 3);
+	// vfs_read(fd, buf_read+3, 3);
+
 
 	int MAXCMD = 20;
   	char cmd[MAXCMD]; 

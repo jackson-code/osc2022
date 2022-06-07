@@ -421,7 +421,7 @@ void *register_slab(unsigned int size) {
   slab_cache *sc = slab_st;
   while (sc != NULL) {
     if (sc->size == size) {
-      uart_puts("find token\n");
+      //uart_puts("find token\n");
       return (void *)sc;
     }
     sc = sc->next_slab;
@@ -439,7 +439,7 @@ void *register_slab(unsigned int size) {
   sc->page_remain = PAGE_SIZE;
   sc->next_slab = slab_st;
   slab_st = sc;
-  uart_puts("new slab\n");
+  //uart_puts("new slab\n");
   return (void *)sc;
 }
 
@@ -448,7 +448,7 @@ void *register_slab(unsigned int size) {
  size in byte
 */
 void *kmalloc(unsigned long size) {
-  uart_puts("( mm.c, kmalloc() )\n");
+  //uart_puts("( mm.c, kmalloc() )\n");
   size = pad(size, 16);
   if (size > PAGE_SIZE / 2) {//if size > 2048B use allocate page
     return alloc_page(size);
@@ -553,7 +553,7 @@ void push_cache(cache_list **cl, cache_list *new_chunk) {
   (*cl) = new_chunk;
 }
 void _free_slab(void *ptr, slab_cache *sc, page_descriptor *pd) {
-  uart_puts("free slab inter\n");
+  //uart_puts("free slab inter\n");
   push_cache(&(pd->free_list), (cache_list *)ptr);
   pd->free_count++;
   sc->free_count++;
@@ -573,7 +573,7 @@ void free_slab(void *ptr, void *slab) {
   }
 }
 void free_unknow_slab(void *ptr) {
-  uart_puts("free slab unknow\n");
+  //uart_puts("free slab unknow\n");
   slab_cache *sc = slab_st;
   while (sc != NULL) {
     page_descriptor *pd = sc->head_pd;

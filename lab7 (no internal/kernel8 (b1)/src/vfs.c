@@ -60,9 +60,9 @@ int vfs_traversal(const char* target, vnode_t *dir_node, vnode_t **v_tar) {
     }
     else
     {   // search in the next level
-        for (list_head *subdir = dir_node->subdirs.next; subdir != &dir_node->subdirs; subdir = subdir->next)
+        for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
         {
-            vnode_t *child = list_entry(subdir, struct vnode, subdirs);
+            vnode_t *child = list_entry(sibling, struct vnode, siblings);
             ret = vfs_traversal(target, child, v_tar);
             if(ret == 0) {  // find!
                 return ret;             
@@ -188,7 +188,7 @@ int vfs_mkdir(const char* pathname) {
     int ret = vfs_lookup(pathname, &dir_node);
 
     // 2. Create a new dir vnode
-    if (ret == 0 && dir_node->type == DIRECTORY)
+    if (ret != 0 && dir_node->type == DIRECTORY)
     {
         vnode_t *target = (vnode_t *)kmalloc(sizeof(vnode_t));
         return dir_node->v_ops->mkdir(dir_node, &target, comp_names[comp_count - 1]);
@@ -273,7 +273,6 @@ vnode_t *tmpfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type t
     {
         v->mount = rootfs;
     }
-    
     v->f_ops = tmpfs_f_op;
     v->v_ops = tmpfs_v_op;
     v->internal = 0;
@@ -286,9 +285,20 @@ vnode_t *tmpfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type t
     list_init(&v->subdirs);
     if (parent != 0)
     {
-        //list_push(&parent->subdirs, (list_head *)v);
-        list_push(&parent->subdirs, &v->subdirs);
+        // list_push(&parent->subdirs, &v->subdirs);
+        list_push(&parent->subdirs, &v->siblings);
     }
+    uart_puts("tmpfs_create_vnode():\n\tvnode at 0x");
+    uart_put_hex((unsigned long)v);
+    if (parent != 0) {
+        uart_puts("\tparent->subdirs at 0x");
+        uart_put_hex((unsigned long)&parent->subdirs);
+    }
+    uart_puts("\tv->siblings at 0x");
+    uart_put_hex((unsigned long)&v->siblings);
+    uart_puts(",\tsubdirs at 0x");
+    uart_put_hex((unsigned long)&v->subdirs);
+    uart_puts("\n");
     return v;
 }
 
@@ -387,9 +397,9 @@ int tmpfs_close(file_t* file) {
 //---------- vnode operation ----------//
 int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
     // finding file's vnode in child
-    for (list_head *subdir = dir_node->subdirs.next; subdir != &dir_node->subdirs; subdir = subdir->next)
+    for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
     {
-        vnode_t *child = list_entry(subdir, struct vnode, subdirs);
+        vnode_t *child = list_entry(sibling, struct vnode, siblings);
         if (!str_cmp(child->name, component_name))
         {
             *v_tar = child;

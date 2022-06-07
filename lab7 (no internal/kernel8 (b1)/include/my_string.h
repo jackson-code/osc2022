@@ -8,5 +8,4 @@ int 	str_len(const char* s);
 int 	str_token_count(const char *s, char delimiter);
 void    str_token(const char *s, char **tokens, char delimiter);
 
-
 #endif

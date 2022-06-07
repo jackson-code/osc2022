@@ -72,20 +72,6 @@ void str_token(const char *s, char **tokens, char delimiter)
 {
 	int token_idx = 0;
 	int num = str_token_count(s, delimiter);
-	// while (*s) {
-	// 	if (idx == num) {
-	// 		while (*s != delimiter && *s != '\0')
-	// 			*token++ = *s++;
-	// 		*token = '\0';
-	// 		break;
-	// 	}
-	// 	else {
-	// 		while (*s != delimiter)
-	// 			s++;
-	// 		s++;				// skip delimiter
-	// 		idx++;				// next token
-	// 	}
-	// }
 
 	while (*s == delimiter)
 	{
@@ -97,7 +83,8 @@ void str_token(const char *s, char **tokens, char delimiter)
 		while (*s != delimiter && *s != '\0')
 			*token++ = *s++;
 		*token = '\0';
-		token_idx++;
+		s++;			// skip delimiter
+		token_idx++;	// next token
 	}
 }
 

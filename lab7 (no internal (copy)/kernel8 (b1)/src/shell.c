@@ -182,10 +182,27 @@ void shell_execute(char *cmd)
 		el1_exec("syscall.img", argv);	
 	}
 	else if (!str_cmp(keyword, "b1")) {
-		file_t **fd = 0;
-		vfs_open("/ab", O_CREAT, fd);
-		vfs_open("/ab", O_CREAT, fd);
+		file_t *fd = (file_t *)kmalloc(sizeof(file_t));
+		vfs_open("/ab", O_CREAT, &fd);
+		vfs_open("/ab", O_CREAT, &fd);
+		vfs_close(fd);
+
+		char *buf_write = "apple";
+		char buf_read[4096]; 
+
+		fd = (file_t *)kmalloc(sizeof(file_t));
+		vfs_open("/ab", O_CREAT, &fd);
+		vfs_open("/ab", O_CREAT, &fd);
+
+		vfs_write(fd, buf_write, 123);
+		vfs_close(fd);
+
+		fd = (file_t *)kmalloc(sizeof(file_t));
+		vfs_open("/ab", O_CREAT, &fd);
+		vfs_read(fd, buf_read, 3);
+		vfs_read(fd, buf_read+3, 3);
 	}
+	
 	else {
 		uart_puts("ERROR: unsupport shell command\n");
 	}

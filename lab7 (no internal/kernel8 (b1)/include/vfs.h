@@ -96,8 +96,8 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 //                         tmpfs                            //
 //----------------------------------------------------------//
 #define TMPFS_MAX_FILE_SIZE         (4096)  // 4KB
-//#define TMPFS_MAX_COMPONENT_NAME    (15)
-//#define TMPFS_MAX_COMPONENT_COUNT   (256)
+#define TMPFS_MAX_COMPONENT_NAME    (15)
+#define TMPFS_MAX_COMPONENT_COUNT   (256)
 
 typedef struct internal_tmpfs {
    char *file_content;
