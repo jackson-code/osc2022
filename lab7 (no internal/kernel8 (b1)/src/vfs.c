@@ -3,6 +3,8 @@
 #include "my_string.h"
 #include "uart.h"
 #include "utils.h"
+#include "process.h"
+#include "scheduler.h"
 
 char *get_last_component_name(const char *pathname) {
     int len = str_len(pathname);
@@ -212,25 +214,91 @@ int vfs_lookup(const char* pathname, vnode_t** v_tar) {
         for (int i = 0; i < comp_count; i++) {
             vnode_t *next_vnode;
             int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
-            if(ret != 0) {
+            if(ret != 0) {              // can't find
                 *v_tar = vnode_itr;     // return directory node
-                return ret;             // can't find
+                return ret;             
             }
             vnode_itr = next_vnode;
         }
         *v_tar = vnode_itr;
         return 0;
     }
-    else    // relative path
+    else                            // relative path
     {
-        return 1111;
-    }  
+        if (pathname[0] == '\0')    // return root vnode
+        {
+            Task *cur = sche_running_proc(&sche_proc);
+            *v_tar = cur->dir_node->mount->root;
+            return 0;
+        }
+        else if (pathname[0] == '.')
+        {
+            
+        }
+        else if (pathname[0] == '.' && pathname[1] == '.')
+        {
 
+        }
+        uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
+        return -1;
+    }
+      
     // free tokens
-    for (int j = 0; j < comp_count; j++) {
-		kfree(comp_names[j]);
-	}  
+    // for (int j = 0; j < comp_count; j++) {
+	// 	kfree(comp_names[j]);
+	// }  
 }
+
+int vfs_lookup(const char* pathname, vnode_t** v_tar) {
+    // get component name
+	int comp_count = str_token_count(pathname, '/');
+	char *comp_names[comp_count];
+    int max_name_len = 64;
+	for (int j = 0; j < comp_count; j++) {
+		comp_names[j] = (char *)kmalloc(max_name_len);
+	}
+    str_token(pathname, comp_names, '/');
+    
+    if (pathname[0] == '\0')    // return root vnode                          // relative path
+    {
+        Task *cur = sche_running_proc(&sche_proc);
+        *v_tar = cur->dir_node->mount->root;
+        return 0;
+    } else {
+        vnode_t *vnode_itr;
+        if (pathname[0] == '/')     // absulute path
+        {
+            vnode_itr = rootfs->root;
+        }
+        else if (pathname[0] == '.')
+        {
+            Task *cur = sche_running_proc(&sche_proc);
+            vnode_itr = cur->dir_node;
+        }
+        else if (pathname[0] == '.' && pathname[1] == '.')
+        {
+            Task *cur = sche_running_proc(&sche_proc);
+            vnode_itr = cur->dir_node->parent;
+        }
+        else
+        {
+            uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
+            return -1;
+        }
+        for (int i = 0; i < comp_count; i++) {
+            vnode_t *next_vnode;
+            int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
+            if(ret != 0) {              // can't find
+                *v_tar = vnode_itr;     // return directory node
+                return ret;             
+            }
+            vnode_itr = next_vnode;
+        }
+        *v_tar = vnode_itr;
+        return 0;
+    }
+}
+
 int vfs_create(vnode_t* dir_node, vnode_t** file_node, const char* component_name) {
     return rootfs->root->v_ops->create(dir_node, file_node, component_name);
 }
@@ -396,7 +464,7 @@ int tmpfs_close(file_t* file) {
 
 //---------- vnode operation ----------//
 int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    // finding file's vnode in child
+    // finding vnode in dir_node's child
     for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
     {
         vnode_t *child = list_entry(sibling, struct vnode, siblings);

@@ -2,6 +2,7 @@
 #define _TASK_H
 
 #include "trapframe.h"
+#include "vfs.h"
 
 enum task_status {
 	TASK_IDLE = 0,
@@ -43,7 +44,10 @@ typedef struct _Task{
     
     unsigned long a_addr;               // app address
     unsigned long *code;                // user code
-    
+
+    // TODO: initilize this field   
+    vnode_t *dir_node;                   // current working directory
+
 	/*
 	task stack:this ~ this+TASKSIZE(sp point to here in begining)
 	*/
