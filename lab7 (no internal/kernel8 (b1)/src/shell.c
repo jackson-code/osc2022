@@ -186,16 +186,23 @@ void shell_execute(char *cmd)
 		vfs_open("/ab", O_CREAT, &fd);
 		vfs_open("/ab", O_CREAT, &fd);
 		vfs_close(fd);
-		kfree(fd);
 
-		char *buf = "apple";
-		vfs_write(fd, buf, 123);
+		char *buf_write = "apple";
+		char buf_read[4096]; 
 
+		fd = (file_t *)kmalloc(sizeof(file_t));
 		vfs_open("/ab", O_CREAT, &fd);
 		vfs_open("/ab", O_CREAT, &fd);
 
-		vfs_write(fd, buf, 123);
+		vfs_write(fd, buf_write, 123);
+		vfs_close(fd);
+
+		fd = (file_t *)kmalloc(sizeof(file_t));
+		vfs_open("/ab", O_CREAT, &fd);
+		vfs_read(fd, buf_read, 3);
+		vfs_read(fd, buf_read+3, 3);
 	}
+	
 	else {
 		uart_puts("ERROR: unsupport shell command\n");
 	}

@@ -52,8 +52,58 @@ int register_filesystem(struct filesystem* fs) {
     return -1;
 }
 
-//---------- file operation ----------//
+int vfs_traversal(const char* target, vnode_t *dir_node, vnode_t **v_tar) {
+    // search in the same level
+    int ret = dir_node->v_ops->lookup(dir_node, v_tar, target);
+    if(ret == 0) {  // find!
+        return ret;             
+    }
+    else
+    {   // search in the next level
+        for (list_head *subdir = dir_node->subdirs.next; subdir != &dir_node->subdirs; subdir = subdir->next)
+        {
+            vnode_t *child = list_entry(subdir, struct vnode, subdirs);
+            ret = vfs_traversal(target, child, v_tar);
+            if(ret == 0) {  // find!
+                return ret;             
+            }
+        }
+        return -1;
+    }
+}
 
+int vfs_mount(const char* target, const char* filesystem) {
+	uart_puts("vfs_mount begin\n");
+
+    filesystem_t *fs = (filesystem_t *)kmalloc(sizeof(filesystem_t *));
+    fs = (filesystem_t *)kmalloc(sizeof(filesystem_t));
+    fs->name = filesystem;
+    // fs->set_mountup
+
+    // register fs
+    register_filesystem(fs);
+
+    int ret;
+    vnode_t *v_tar; 
+    ret = vfs_traversal(target, rootfs->root, &v_tar);
+    if (ret != 0)
+    {
+        uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
+    }
+    
+
+    // mount up fs
+    struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount *));
+    mount_fs->fs = fs;
+    mount_fs->root = v_tar;
+    v_tar->mount = mount_fs;
+
+	uart_puts("vfs_mount finish\n");
+    return ret;
+}
+
+
+//---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     // get file name (TODO: free comp_names)
 	int comp_count = str_token_count(pathname, '/');
@@ -124,7 +174,27 @@ int vfs_read(struct file* file, void* buf, unsigned long len) {
 
 //---------- vnode operation ----------//
 int vfs_mkdir(const char* pathname) {
-    return 0;
+    // get file name (TODO: free comp_names)
+	int comp_count = str_token_count(pathname, '/');
+	char *comp_names[comp_count];
+    int max_name_len = 64;
+	for (int j = 0; j < comp_count; j++) {
+		comp_names[j] = (char *)kmalloc(max_name_len);
+	}
+    str_token(pathname, comp_names, '/');
+
+    vnode_t *dir_node;          // will be parent dir vnode
+    // 1. Lookup pathname, get the parent dir vnode
+    int ret = vfs_lookup(pathname, &dir_node);
+
+    // 2. Create a new dir vnode
+    if (ret == 0 && dir_node->type == DIRECTORY)
+    {
+        vnode_t *target = (vnode_t *)kmalloc(sizeof(vnode_t));
+        return dir_node->v_ops->mkdir(dir_node, &target, comp_names[comp_count - 1]);
+    }
+
+    return -1;
 }
 int vfs_lookup(const char* pathname, vnode_t** v_tar) {
     // get component name
@@ -195,7 +265,15 @@ int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs) {
 
 vnode_t *tmpfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
     vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
-    v->mount = rootfs;
+    if (parent != 0)
+    {
+        v->mount = parent->mount;
+    }
+    else
+    {
+        v->mount = rootfs;
+    }
+    
     v->f_ops = tmpfs_f_op;
     v->v_ops = tmpfs_v_op;
     v->internal = 0;
@@ -225,11 +303,16 @@ int tmpfs_create_file(vnode_t* file_node, file_t** target) {
         (*target)->size = 0;
         (*target)->status = FILE_EXIST;
 
-        // alloc space for file's content
         file_node->file = *target;
-        inter_tmpfs_t *inter = (inter_tmpfs_t *)kmalloc(sizeof(inter_tmpfs_t));
-        inter->file_content = (char *)kmalloc(TMPFS_MAX_FILE_SIZE);
-        file_node->internal = inter;
+
+        // won't into the if, if the file wasn't opened first time
+        if (file_node->internal == 0)   // first time to establish the file
+        {
+            // alloc space for file's content
+            inter_tmpfs_t *inter = (inter_tmpfs_t *)kmalloc(sizeof(inter_tmpfs_t));
+            inter->file_content = (char *)kmalloc(TMPFS_MAX_FILE_SIZE);
+            file_node->internal = inter;
+        }
 
         return 0;
     }
@@ -293,12 +376,8 @@ int tmpfs_open(vnode_t* file_node, file_t** target) {
 
 int tmpfs_close(file_t* file) {
     file->status = FILE_NOT_EXIST;
-    // TODO: remove for parent vnode
-    file->vnode->parent->siblings
-
-
-    kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
-    kfree(file->vnode);
+    //kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
+    //kfree(file->vnode);
     kfree(file);
     return 0;
 }
@@ -307,7 +386,7 @@ int tmpfs_close(file_t* file) {
 
 //---------- vnode operation ----------//
 int tmpfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    // finding file's dentry in child
+    // finding file's vnode in child
     for (list_head *subdir = dir_node->subdirs.next; subdir != &dir_node->subdirs; subdir = subdir->next)
     {
         vnode_t *child = list_entry(subdir, struct vnode, subdirs);
@@ -341,7 +420,7 @@ int tmpfs_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
 }
 
 int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-
-  return 0;
+    *target = tmpfs_create_vnode(component_name, dir_node, DIRECTORY);
+    return 0;
 }
 //-------------------------------------//

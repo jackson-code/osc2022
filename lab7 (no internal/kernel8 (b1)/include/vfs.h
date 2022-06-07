@@ -3,7 +3,10 @@
 
 #include "list.h"
 
-#define EOF   (-1)
+#define EOF   (0xff)
+
+#define VFS_MAX_PATHNAME          (256)
+
 
 //----------------------------------------------------------//
 //                     virtual file system                  //
@@ -77,6 +80,7 @@ struct mount* rootfs;
 
 void rootfs_init();
 int register_filesystem(struct filesystem* fs);
+int vfs_mount(const char* target, const char* filesystem);
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, struct file** target);
 int vfs_close(struct file* file);
@@ -84,7 +88,6 @@ int vfs_write(struct file* file, const void* buf, unsigned long len);
 int vfs_read(struct file* file, void* buf, unsigned long len);
 //---------- vnode operation ----------//
 int vfs_mkdir(const char* pathname);
-int vfs_mount(const char* target, const char* filesystem);
 int vfs_lookup(const char* pathname, struct vnode** target);
 int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 
@@ -92,7 +95,9 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 //----------------------------------------------------------//
 //                         tmpfs                            //
 //----------------------------------------------------------//
-#define TMPFS_MAX_FILE_SIZE (4096)  // 4KB
+#define TMPFS_MAX_FILE_SIZE         (4096)  // 4KB
+//#define TMPFS_MAX_COMPONENT_NAME    (15)
+//#define TMPFS_MAX_COMPONENT_COUNT   (256)
 
 typedef struct internal_tmpfs {
    char *file_content;
