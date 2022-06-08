@@ -13,7 +13,7 @@
 //----------------------------------------------------------//
 
 // flag
-#define O_CREAT (1)
+#define O_CREAT (00000100)
 
 enum vnode_type {
     REGULAR_FILE = 1,
@@ -81,6 +81,7 @@ struct mount* rootfs;
 void rootfs_init();
 int register_filesystem(struct filesystem* fs);
 int vfs_mount(const char* target, const char* filesystem);
+int vfs_chdir(const char *pathname);
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, struct file** target);
 int vfs_close(struct file* file);

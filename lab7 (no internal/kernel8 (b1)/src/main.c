@@ -31,14 +31,9 @@ void main()
 
 	rootfs_init();
 
-	// test basic 2
-	vfs_mkdir("/1-a");
-	vfs_mkdir("/1-b");
-	vfs_mkdir("/1-a/2-a1");
-	vfs_mkdir("/1-a/2-a2");
-	vfs_mkdir("/1-b/2-b1");
+	// test basic 3
 
-	vfs_mount("2-b1", "tmpfs");
+
 
 	// file_t *fd = (file_t *)kmalloc(sizeof(file_t));
 	// vfs_open("/ab", O_CREAT, &fd);

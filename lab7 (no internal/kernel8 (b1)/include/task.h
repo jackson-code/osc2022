@@ -31,6 +31,8 @@ struct register_context
     unsigned long sp;
 };
 
+#define TASK_MAX_OPEN_FILES         (16)
+
 typedef struct _Task{
     struct register_context reg;        // this item has to put on the first addr of the struct Task, this way make switching thread easy to get this item
 	int id;
@@ -47,6 +49,8 @@ typedef struct _Task{
 
     // TODO: initilize this field   
     vnode_t *dir_node;                   // current working directory
+    file_t *fd_table[TASK_MAX_OPEN_FILES];
+    //int file_count;
 
 	/*
 	task stack:this ~ this+TASKSIZE(sp point to here in begining)

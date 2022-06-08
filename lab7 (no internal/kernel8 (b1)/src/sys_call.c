@@ -4,6 +4,8 @@
 #include "el1.h"
 #include "exception.h"
 #include "mm.h"
+#include "vfs.h"
+#include "scheduler.h"
 
 extern scheduler sche_proc;
 
@@ -163,6 +165,97 @@ void sys_uart_write_hex(struct trapframe* trapframe) {
     trapframe->x[0] = 0;
 }
 
+// syscall number : 11
+void sys_open(struct trapframe* trapframe) {
+    const char *pathname = (const char *)trapframe->x[0];
+    int flags = (int)trapframe->x[1];
+
+    Task *cur_task = sche_running_proc(&sche_proc);
+    file_t *f = (file_t *)kmalloc(sizeof(file_t *));
+
+    if (vfs_open(pathname, flags, &f) != 0) 
+    {
+        uart_puts("ERROR in sys_open():\t can't open the file's vnode\n");
+        return;
+    }
+
+    for (int i = 0; i < TASK_MAX_OPEN_FILES; i++)
+    {
+        if (cur_task->fd_table[i] == 0)
+        {
+            cur_task->fd_table[i] = f;
+            trapframe->x[0] = i;            // return fd num
+            return;
+        }
+    }
+    uart_puts("ERROR in sys_open():\t process's fd_table is full\n");
+    trapframe->x[0] = -1;
+}
+
+// syscall number : 12
+void sys_close(struct trapframe* trapframe) {
+    int fd = (int)trapframe->x[0];
+    Task *cur_task = sche_running_proc(&sche_proc);
+
+    int ret = vfs_close(cur_task->fd_table[fd]);
+    cur_task->fd_table[fd] = 0;
+
+    trapframe->x[0] = ret;                  // return success or not
+}
+
+// syscall number : 13
+// remember to return read size or error code
+void sys_write(struct trapframe* trapframe) {
+    int fd = (int)trapframe->x[0];
+    const void *buf = (const void *)trapframe->x[1];
+    unsigned long len = (unsigned long)trapframe->x[2];
+
+    Task *cur_task = sche_running_proc(&sche_proc);
+    file_t *f = cur_task->fd_table[fd];
+
+    trapframe->x[0] = vfs_write(f, buf, len);
+}
+
+// syscall number : 14
+// remember to return read size or error code
+void sys_read(struct trapframe* trapframe) {
+    int fd = (int)trapframe->x[0];
+    void *buf = (void *)trapframe->x[1];
+    unsigned long len = (unsigned long)trapframe->x[2];
+
+    Task *cur_task = sche_running_proc(&sche_proc);
+    file_t *f = cur_task->fd_table[fd];
+
+    trapframe->x[0] = vfs_read(f, buf, len);
+}
+
+// syscall number : 15
+// you can ignore mode, since there is no access control
+void sys_mkdir(struct trapframe* trapframe) {
+    const char *pathname = (const char *)trapframe->x[0];
+    //unsigned mode = 
+
+    trapframe->x[0] =  vfs_mkdir(pathname);     // return success or not
+}
+
+// syscall number : 16
+// you can ignore arguments other than target (where to mount) and filesystem (fs name)
+void sys_mount(struct trapframe* trapframe) {
+    //const char *src = 
+    const char *target = (const char *)trapframe->x[0];
+    const char *filesystem = (const char *)trapframe->x[1];
+    //unsigned long flags = 
+    //const void *data = 
+
+    trapframe->x[0] =  vfs_mount(target, filesystem);     // return success or not
+}
+
+// syscall number : 17
+void sys_chdir(struct trapframe* trapframe) {
+    const char *pathname = (const char *)trapframe->x[0];
+
+    trapframe->x[0] =  vfs_chdir(pathname);                  // return success or not
+}
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
     //enable_interrupt();
@@ -212,7 +305,42 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_UART_WRITE_HEX:
             enable_interrupt();
             sys_uart_write_hex(trapframe);
-            break;        
+            break;    
+
+        case SYS_OPEN:
+            enable_interrupt();
+            sys_open(trapframe);
+            break;
+
+        case SYS_CLOSE:
+            enable_interrupt();
+            sys_close(trapframe);
+            break;
+
+        case SYS_WRITE:
+            enable_interrupt();
+            sys_write(trapframe);
+            break;
+
+        case SYS_READ:
+            enable_interrupt();
+            sys_read(trapframe);
+            break;
+
+        case SYS_MKDIR:
+            enable_interrupt();
+            sys_mkdir(trapframe);
+            break;
+
+        case SYS_MOUNT:
+            enable_interrupt();
+            sys_mount(trapframe);
+            break;
+
+        case SYS_CHDIR:
+            enable_interrupt();
+            sys_chdir(trapframe);
+            break;
     }
 }
 

@@ -104,6 +104,28 @@ int vfs_mount(const char* target, const char* filesystem) {
     return ret;
 }
 
+int vfs_chdir(const char *pathname) {
+    vnode_t *v_tar;
+    int ret = vfs_lookup(pathname, &v_tar);
+    if (ret == 0 && v_tar->type == DIRECTORY)
+    {
+        Task *cur_task = sche_running_proc(&sche_proc);
+        cur_task->dir_node = v_tar;
+        return 0;
+    }
+    else if (ret != 0) {
+        uart_puts("ERROR in vfs_chdir():\tcan't find the vnode\n");
+        return -1;
+    }
+    else if (ret == 0 && v_tar->type == REGULAR_FILE) {
+        uart_puts("ERROR in vfs_chdir():\tfind the vnode, but it's regular file vnode\n");
+        return -1;
+    }
+    else {
+        uart_puts("ERROR in vfs_chdir():\tunknown error\n");
+        return -1;
+    }
+}
 
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, file_t** file_tar) {
@@ -198,6 +220,58 @@ int vfs_mkdir(const char* pathname) {
 
     return -1;
 }
+
+// int vfs_lookup(const char* pathname, vnode_t** v_tar) {
+//     // get component name
+// 	int comp_count = str_token_count(pathname, '/');
+// 	char *comp_names[comp_count];
+//     int max_name_len = 64;
+// 	for (int j = 0; j < comp_count; j++) {
+// 		comp_names[j] = (char *)kmalloc(max_name_len);
+// 	}
+//     str_token(pathname, comp_names, '/');
+    
+//     if (pathname[0] == '/')     // absulute path
+//     {
+//         vnode_t *vnode_itr = rootfs->root;
+//         for (int i = 0; i < comp_count; i++) {
+//             vnode_t *next_vnode;
+//             int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
+//             if(ret != 0) {              // can't find
+//                 *v_tar = vnode_itr;     // return directory node
+//                 return ret;             
+//             }
+//             vnode_itr = next_vnode;
+//         }
+//         *v_tar = vnode_itr;
+//         return 0;
+//     }
+//     else                            // relative path
+//     {
+//         if (pathname[0] == '\0')    // return root vnode
+//         {
+//             Task *cur = sche_running_proc(&sche_proc);
+//             *v_tar = cur->dir_node->mount->root;
+//             return 0;
+//         }
+//         else if (pathname[0] == '.')
+//         {
+            
+//         }
+//         else if (pathname[0] == '.' && pathname[1] == '.')
+//         {
+
+//         }
+//         uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
+//         return -1;
+//     }
+      
+//     // free tokens
+//     // for (int j = 0; j < comp_count; j++) {
+// 	// 	kfree(comp_names[j]);
+// 	// }  
+// }
+
 int vfs_lookup(const char* pathname, vnode_t** v_tar) {
     // get component name
 	int comp_count = str_token_count(pathname, '/');
@@ -208,95 +282,49 @@ int vfs_lookup(const char* pathname, vnode_t** v_tar) {
 	}
     str_token(pathname, comp_names, '/');
     
+    vnode_t *vnode_itr;
+    int i;
     if (pathname[0] == '/')     // absulute path
     {
-        vnode_t *vnode_itr = rootfs->root;
-        for (int i = 0; i < comp_count; i++) {
-            vnode_t *next_vnode;
-            int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
-            if(ret != 0) {              // can't find
-                *v_tar = vnode_itr;     // return directory node
-                return ret;             
-            }
-            vnode_itr = next_vnode;
-        }
-        *v_tar = vnode_itr;
-        return 0;
+        vnode_itr = rootfs->root;
+        i = 0;
     }
-    else                            // relative path
+    else                        // relative path
     {
-        if (pathname[0] == '\0')    // return root vnode
+        Task *cur_task = sche_running_proc(&sche_proc);
+        i = 1;      // skip '.' or '..' in pathname  
+
+        if (pathname[0] == '\0')                            // return root vnode                          
         {
-            Task *cur = sche_running_proc(&sche_proc);
-            *v_tar = cur->dir_node->mount->root;
+            *v_tar = cur_task->dir_node->mount->root;
             return 0;
-        }
-        else if (pathname[0] == '.')
+        } 
+        else if (pathname[0] == '.'&& pathname[1] != '.')   // return current dir
         {
-            
+            vnode_itr = cur_task->dir_node;
         }
-        else if (pathname[0] == '.' && pathname[1] == '.')
+        else if (pathname[0] == '.' && pathname[1] == '.')  // return upper dir
         {
-
-        }
-        uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
-        return -1;
-    }
-      
-    // free tokens
-    // for (int j = 0; j < comp_count; j++) {
-	// 	kfree(comp_names[j]);
-	// }  
-}
-
-int vfs_lookup(const char* pathname, vnode_t** v_tar) {
-    // get component name
-	int comp_count = str_token_count(pathname, '/');
-	char *comp_names[comp_count];
-    int max_name_len = 64;
-	for (int j = 0; j < comp_count; j++) {
-		comp_names[j] = (char *)kmalloc(max_name_len);
-	}
-    str_token(pathname, comp_names, '/');
-    
-    if (pathname[0] == '\0')    // return root vnode                          // relative path
-    {
-        Task *cur = sche_running_proc(&sche_proc);
-        *v_tar = cur->dir_node->mount->root;
-        return 0;
-    } else {
-        vnode_t *vnode_itr;
-        if (pathname[0] == '/')     // absulute path
-        {
-            vnode_itr = rootfs->root;
-        }
-        else if (pathname[0] == '.')
-        {
-            Task *cur = sche_running_proc(&sche_proc);
-            vnode_itr = cur->dir_node;
-        }
-        else if (pathname[0] == '.' && pathname[1] == '.')
-        {
-            Task *cur = sche_running_proc(&sche_proc);
-            vnode_itr = cur->dir_node->parent;
+            vnode_itr = cur_task->dir_node->parent;
         }
         else
         {
             uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
             return -1;
         }
-        for (int i = 0; i < comp_count; i++) {
-            vnode_t *next_vnode;
-            int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
-            if(ret != 0) {              // can't find
-                *v_tar = vnode_itr;     // return directory node
-                return ret;             
-            }
-            vnode_itr = next_vnode;
-        }
-        *v_tar = vnode_itr;
-        return 0;
     }
+
+    for (; i < comp_count; i++) {
+        vnode_t *next_vnode;
+        int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
+        if(ret != 0) {              // can't find
+            *v_tar = vnode_itr;     // return directory node
+            return ret;             
+        }
+        vnode_itr = next_vnode;
+    }
+    *v_tar = vnode_itr;
+    return 0;
 }
 
 int vfs_create(vnode_t* dir_node, vnode_t** file_node, const char* component_name) {
@@ -396,9 +424,10 @@ int tmpfs_create_file(vnode_t* file_node, file_t** target) {
     }
     else
     {
-        //*target = file_node->file;
-        uart_puts("\tERROR tmpfs_create_file(): file existing\n");
-        return -1;
+        *target = file_node->file;
+        //(*target)->status = FILE_EXIST;
+        uart_puts("\tWARNING tmpfs_create_file(): file existing\n");
+        return 0;
     }
 }
 
@@ -454,6 +483,7 @@ int tmpfs_open(vnode_t* file_node, file_t** target) {
 
 int tmpfs_close(file_t* file) {
     file->status = FILE_NOT_EXIST;
+    file->vnode->file = 0;
     //kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
     //kfree(file->vnode);
     kfree(file);

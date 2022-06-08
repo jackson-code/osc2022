@@ -18,9 +18,13 @@
 #define SYS_UART_WRITE_INT  8
 #define SYS_UART_WRITE_HEX  9
 
-//#ifndef __ASSEMBLY__
-
-//#include "typedef.h"
+#define SYS_OPEN            11
+#define SYS_CLOSE           12
+#define SYS_WRITE           13
+#define SYS_READ            14
+#define SYS_MKDIR           15
+#define SYS_MOUNT           16
+#define SYS_CHDIR           17
 
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe);

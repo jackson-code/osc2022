@@ -202,6 +202,23 @@ void shell_execute(char *cmd)
 		vfs_read(fd, buf_read, 3);
 		vfs_read(fd, buf_read+3, 3);
 	}
+	else if (!str_cmp(keyword, "b2"))
+	{
+		vfs_mkdir("/1-a");
+		vfs_mkdir("/1-b");
+		vfs_mkdir("/1-a/2-a1");
+		vfs_mkdir("/1-a/2-a2");
+		vfs_mkdir("/1-b/2-b1");
+
+		vfs_mount("2-b1", "tmpfs");
+	}
+	else if (!str_cmp(keyword, "b3"))
+	{
+		vfs_mkdir("/user");
+		char *argv[] = {"no", "argv"};
+		el1_exec("app2.img", argv);	
+	}
+	
 	
 	else {
 		uart_puts("ERROR: unsupport shell command\n");
