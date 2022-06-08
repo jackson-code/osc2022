@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "process.h"
 #include "scheduler.h"
+#include "initramfs.h"
 
 char *get_last_component_name(const char *pathname) {
     int len = str_len(pathname);
@@ -51,6 +52,10 @@ int register_filesystem(struct filesystem* fs) {
     {
         return tmpfs_register();
     }
+    if (!str_cmp("initramfs", fs->name))
+    {
+        return initramfs_register();
+    }
     return -1;
 }
 
@@ -85,15 +90,22 @@ int vfs_mount(const char* target, const char* filesystem) {
     // register fs
     register_filesystem(fs);
 
+    // find target vnode
     int ret;
     vnode_t *v_tar; 
-    ret = vfs_traversal(target, rootfs->root, &v_tar);
-    if (ret != 0)
+    if (target[0] == '/' && target[1] == '\0')
     {
-        uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
+        v_tar = rootfs->root;   // mount fs on root
+    }
+    else
+    {
+        if (target[0] == '/')
+            target++;           // remove '/'
+        ret = vfs_traversal(target, rootfs->root, &v_tar);
+        if (ret != 0)
+            uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
     }
     
-
     // mount up fs
     struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount *));
     mount_fs->fs = fs;
@@ -217,60 +229,12 @@ int vfs_mkdir(const char* pathname) {
         vnode_t *target = (vnode_t *)kmalloc(sizeof(vnode_t));
         return dir_node->v_ops->mkdir(dir_node, &target, comp_names[comp_count - 1]);
     }
-
-    return -1;
+    else
+    {
+        uart_puts("WARNING in vfs_mkdir():\tdirectory vnode has been existing\n");
+        return -1;
+    }
 }
-
-// int vfs_lookup(const char* pathname, vnode_t** v_tar) {
-//     // get component name
-// 	int comp_count = str_token_count(pathname, '/');
-// 	char *comp_names[comp_count];
-//     int max_name_len = 64;
-// 	for (int j = 0; j < comp_count; j++) {
-// 		comp_names[j] = (char *)kmalloc(max_name_len);
-// 	}
-//     str_token(pathname, comp_names, '/');
-    
-//     if (pathname[0] == '/')     // absulute path
-//     {
-//         vnode_t *vnode_itr = rootfs->root;
-//         for (int i = 0; i < comp_count; i++) {
-//             vnode_t *next_vnode;
-//             int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
-//             if(ret != 0) {              // can't find
-//                 *v_tar = vnode_itr;     // return directory node
-//                 return ret;             
-//             }
-//             vnode_itr = next_vnode;
-//         }
-//         *v_tar = vnode_itr;
-//         return 0;
-//     }
-//     else                            // relative path
-//     {
-//         if (pathname[0] == '\0')    // return root vnode
-//         {
-//             Task *cur = sche_running_proc(&sche_proc);
-//             *v_tar = cur->dir_node->mount->root;
-//             return 0;
-//         }
-//         else if (pathname[0] == '.')
-//         {
-            
-//         }
-//         else if (pathname[0] == '.' && pathname[1] == '.')
-//         {
-
-//         }
-//         uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
-//         return -1;
-//     }
-      
-//     // free tokens
-//     // for (int j = 0; j < comp_count; j++) {
-// 	// 	kfree(comp_names[j]);
-// 	// }  
-// }
 
 int vfs_lookup(const char* pathname, vnode_t** v_tar) {
     // get component name

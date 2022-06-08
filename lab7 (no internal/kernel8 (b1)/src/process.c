@@ -73,6 +73,7 @@ Task *process_create(char *file_addr, unsigned long app_size)
 	process->code = (unsigned long *)new_addr;
 
 	// init user's work directory
+	vfs_mkdir("/user");
 	int ret = vfs_lookup("/user", &process->dir_node);
 	if (ret != 0)
 	{

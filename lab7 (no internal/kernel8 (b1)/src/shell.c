@@ -214,7 +214,6 @@ void shell_execute(char *cmd)
 	}
 	else if (!str_cmp(keyword, "b3"))
 	{
-		vfs_mkdir("/user");
 		char *argv[] = {"no", "argv"};
 		el1_exec("app2.img", argv);	
 	}

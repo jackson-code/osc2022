@@ -31,7 +31,9 @@ void main()
 
 	rootfs_init();
 
-	// test basic 3
+	// test basic 4
+	vfs_mkdir("/initramfs");
+	vfs_mount("/initramfs", "initramfs");
 
 
 
