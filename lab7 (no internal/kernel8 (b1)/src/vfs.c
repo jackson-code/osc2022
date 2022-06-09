@@ -5,6 +5,10 @@
 #include "utils.h"
 #include "process.h"
 #include "scheduler.h"
+#include "mailbox.h"
+
+file_op_t *initramfs_f_op;
+vnode_op_t *initramfs_v_op;
 
 //----------------------------------------------------------//
 //                     virtual file system                  //
@@ -84,7 +88,7 @@ int vfs_mount(const char* target, const char* filesystem) {
     }
     else
     {
-        if (target[0] == '/')
+        if (target[0] == '/' && target[1] != '\0')
             target++;           // remove '/'
         ret = vfs_traversal(target, rootfs->root, &v_tar);
         if (ret != 0)
@@ -92,10 +96,19 @@ int vfs_mount(const char* target, const char* filesystem) {
     }
     
     // mount up fs
-    struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount *));
+    struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount));
     mount_fs->fs = fs;
     mount_fs->root = v_tar;
     v_tar->mount = mount_fs;
+
+    // register method
+    // register tmpfs's method by default
+    if (!str_cmp("initramfs", filesystem))
+    {
+        v_tar->f_ops = initramfs_f_op;
+        v_tar->v_ops = initramfs_v_op;
+    }
+    
 
 	uart_puts("vfs_mount finish\n");
     return ret;
@@ -137,6 +150,16 @@ int vfs_mknod(const char *pathname, enum dev_type dev_type){
     }
     else if (dev_type == FRAME_BUFFER)
     {
+        mailbox_init_framebuffer();
+
+        vnode_t *dev;
+        
+        // get dev vnode 
+        vfs_lookup(pathname, &dev);
+
+        sf_fb_register();
+        return sf_fb_create(dev);
+
         return -1;
     }
     else
@@ -167,15 +190,19 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     {
         *file_tar = node->file;
         return 0;
-    }
-    
+    }     
 
     // 2. Create a new file handle for this vnode if found.
     if (ret == 0 && node->type == REGULAR_FILE)
     {
         //str_cpy(node->name, file_name);
         return node->f_ops->open(node, file_tar);
-    } else
+    } 
+    else if (!str_cmp(node->name, "initramfs"))
+    {
+        return node->f_ops->open(node, file_tar);
+    } 
+    else
     // 3. Create a new file(and vnode) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
     {
@@ -195,7 +222,7 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
 int vfs_close(struct file* file) {
     // 1. release the file handle
     // 2. Return error code if fails
-    return rootfs->root->f_ops->close(file);
+    return file->vnode->f_ops->close(file);
 }
 
 int vfs_write(struct file* file, const void* buf, unsigned long len) {
@@ -517,9 +544,6 @@ int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name)
 //----------------------------------------------------------//
 //                         initramfs                        //
 //----------------------------------------------------------//
-file_op_t *initramfs_f_op;
-vnode_op_t *initramfs_v_op;
-
 void initramfs_init() {
     vfs_mkdir("/initramfs");
 	vfs_mount("/initramfs", "initramfs");    
@@ -540,47 +564,49 @@ int initramfs_register() {
     return 0;
 }
 
-vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
-    vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
-    if (parent != 0)
-    {
-        v->mount = parent->mount;
-    }
-    else
-    {
-        v->mount = rootfs;
-    }
-    v->f_ops = initramfs_f_op;
-    v->v_ops = initramfs_v_op;
-    v->internal = 0;
+// vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
+//     vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
+//     if (parent != 0)
+//     {
+//         v->mount = parent->mount;
+//     }
+//     else
+//     {
+//         v->mount = rootfs;
+//     }
+//     v->f_ops = initramfs_f_op;
+//     v->v_ops = initramfs_v_op;
+//     v->internal = 0;
 
-    v->file = 0;
-    v->parent = parent;
-    str_cpy(v->name, name);
-    v->type = type;
-    list_init(&v->siblings);
-    list_init(&v->subdirs);
-    if (parent != 0)
-    {
-        list_push(&parent->subdirs, &v->siblings);
-    }
+//     v->file = 0;
+//     v->parent = parent;
+//     str_cpy(v->name, name);
+//     v->type = type;
+//     list_init(&v->siblings);
+//     list_init(&v->subdirs);
+//     if (parent != 0)
+//     {
+//         list_push(&parent->subdirs, &v->siblings);
+//     }
 
-    // debug message
-    uart_puts("initramfs_create_vnode():\n\tvnode at 0x");
-    uart_put_hex((unsigned long)v);
-    if (parent != 0) {
-        uart_puts("\tparent->subdirs at 0x");
-        uart_put_hex((unsigned long)&parent->subdirs);
-    }
-    uart_puts("\tv->siblings at 0x");
-    uart_put_hex((unsigned long)&v->siblings);
-    uart_puts(",\tsubdirs at 0x");
-    uart_put_hex((unsigned long)&v->subdirs);
-    uart_puts("\n");
-    return v;
-}
+//     // debug message
+//     uart_puts("initramfs_create_vnode():\n\tvnode at 0x");
+//     uart_put_hex((unsigned long)v);
+//     if (parent != 0) {
+//         uart_puts("\tparent->subdirs at 0x");
+//         uart_put_hex((unsigned long)&parent->subdirs);
+//     }
+//     uart_puts("\tv->siblings at 0x");
+//     uart_put_hex((unsigned long)&v->siblings);
+//     uart_puts(",\tsubdirs at 0x");
+//     uart_put_hex((unsigned long)&v->subdirs);
+//     uart_puts("\n");
+//     return v;
+// }
 
 int initramfs_create_file(vnode_t* file_node, file_t** target) {
+    uart_puts("\t***** initramfs_create_file *****\n");
+
     if (file_node->file == 0 || (*target)->status == FILE_NOT_EXIST)   // file not existing
     {
         // create file
@@ -615,10 +641,13 @@ int initramfs_create_file(vnode_t* file_node, file_t** target) {
 
 //---------- file operation ----------//
 int initramfs_write(file_t* file, const void* buf, unsigned long len) {
+    uart_puts("\t***** initramfs_write *****\n");
     return -1;
 }
 
 int initramfs_read(file_t* file, void* buf, unsigned long len) {
+    uart_puts("\t***** initramfs_read *****\n");
+
     char *src = ((inter_tmpfs_t *)(file->vnode->internal))->file_content;
     char *des = (char *)buf;
     src += file->f_pos;
@@ -638,18 +667,22 @@ int initramfs_read(file_t* file, void* buf, unsigned long len) {
     open the vnode, create file to the vnode
 */
 int initramfs_open(vnode_t* file_node, file_t** target) {
-    if (file_node->type == REGULAR_FILE)
+    uart_puts("\t***** initramfs_open *****\n");
+    
+    if (file_node->type == DIRECTORY)   // iniramfs have no create method, so no regular file
     {
         return initramfs_create_file(file_node, target); 
     }
     else
     {
-        uart_puts("\tERROR in initramfs_open(): can't open directory vnode\n");
+        uart_puts("\tERROR in initramfs_open(): can't open regular file vnode\n");
         return -1;
     }
 }
 
 int initramfs_close(file_t* file) {
+    uart_puts("\t***** initramfs_close *****\n");
+    
     file->status = FILE_NOT_EXIST;
     file->vnode->file = 0;
     //kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
@@ -662,6 +695,8 @@ int initramfs_close(file_t* file) {
 
 //---------- vnode operation ----------//
 int initramfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    uart_puts("\t***** initramfs_lookup *****\n");
+
     // finding vnode in dir_node's child
     for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
     {
@@ -676,10 +711,12 @@ int initramfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_n
 }
 
 int initramfs_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
+    uart_puts("\t***** initramfs_create *****\n");
     return -1; 
 }
 
 int initramfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
+    uart_puts("\t***** initramfs_mkdir *****\n");
     return -1;
 }
 //-------------------------------------//
@@ -757,4 +794,97 @@ int sf_uart_read(file_t* file, void* buf, unsigned long len) {
         len--;
     }
     return des - (char *)buf;
+}
+
+
+//----------------------------------------------------------//
+//                framebuffer special file                  //
+//----------------------------------------------------------//
+file_op_t *fb_f_op;
+vnode_op_t *fb_v_op;
+/*
+    create uart's vnode & file below dev vnode
+*/
+int sf_fb_create(vnode_t *dev) {
+    // create framebuffer's vnode
+    vnode_t *fb_node = (vnode_t *)kmalloc(sizeof(vnode_t));
+    fb_node->mount = dev->mount;
+    fb_node->f_ops = fb_f_op;
+    fb_node->v_ops = fb_v_op;
+    fb_node->internal = 0;
+
+    fb_node->file = 0;
+    fb_node->parent = dev;
+    str_cpy(fb_node->name, "framebuffer");
+    fb_node->type = SPECIAL_FILE;
+    list_init(&fb_node->siblings);
+    list_init(&fb_node->subdirs);
+    list_push(&dev->subdirs, &fb_node->siblings);
+
+    // create framebuffer's file
+    file_t *fb_file = (file_t *)kmalloc(sizeof(file_t));
+    fb_file->vnode = fb_node;
+    fb_file->f_ops = fb_node->f_ops;
+    fb_file->f_pos = 0;
+    fb_file->size = 0;
+    fb_file->status = FILE_EXIST;
+
+    fb_node->file = fb_file;
+
+    return 0;
+}
+
+int sf_fb_register() {
+    fb_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
+    fb_f_op->open = sf_fb_open;
+    fb_f_op->close = sf_fb_close;
+    fb_f_op->read = sf_fb_read;
+    fb_f_op->write = sf_fb_write;
+
+    fb_v_op = (vnode_op_t *)kmalloc(sizeof(vnode_op_t));
+    fb_v_op->create = 0;
+    fb_v_op->lookup = 0;
+    fb_v_op->mkdir = 0;
+
+    return 0;
+}
+
+int sf_fb_open(vnode_t* file_node, file_t** target) {
+    if (file_node->type == SPECIAL_FILE)
+    {
+        *target = file_node->file;
+        if ((*target)->status == FILE_NOT_EXIST)
+        {
+            (*target)->status = FILE_EXIST;
+        }
+        return 0;
+    }
+    else
+    {
+        uart_puts("ERROR in sf_fb_open():\tfile_node is not a SPECIAL FILE\n");
+        return -1;
+    }
+}
+
+int sf_fb_close(file_t* file) {
+    file->status = FILE_NOT_EXIST;
+    file->vnode->file = 0;
+    kfree(file);
+    return 0;
+}
+
+int sf_fb_write(file_t* file, const void* buf, unsigned long len) {
+    char *src = (char *)buf;
+    while (*src != '\0' && len > 0)
+    {
+        uart_send(*src);
+        src++;
+        len--;
+    }
+    return src - (char *)buf;
+}
+
+// write only
+int sf_fb_read(file_t* file, void* buf, unsigned long len) {
+    return -1;
 }
