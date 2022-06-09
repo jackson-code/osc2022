@@ -70,16 +70,7 @@ Task *process_create(char *file_addr, unsigned long app_size)
 	// alloc mem for user code section
 	unsigned long page_count = ((app_size-1) / 4096) + 1;
 	char *new_addr = kmalloc(page_count * 4096);
-	process->code = (unsigned long *)new_addr;
-
-	// init user's work directory
-	vfs_mkdir("/user");
-	int ret = vfs_lookup("/user", &process->dir_node);
-	if (ret != 0)
-	{
-		uart_puts("ERROR in process_create():\t forgot to vfs_mkdir for '/user'\n");
-	}
-	
+	process->code = (unsigned long *)new_addr;	
 
 	// have to moving user.img from cpio to memory(buddy system reserve for user.img)
 	// otherwise can't get correct buf address of uartwrite

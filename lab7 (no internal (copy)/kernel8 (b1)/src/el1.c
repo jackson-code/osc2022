@@ -85,6 +85,105 @@ void el1_exec(char *img_name, char *argv[])
 	//thread_set_current(process);
 	sche_push(process, &sche_proc);				// push into rq
 
+	// init user's work directory be root dir
+	process->dir_node = rootfs->root;
+
+	uart_puts("loading user prog...\n");
+	if (!str_cmp("no file", file_addr)) {
+		uart_puts("ERROR in el1.c, el1_switch_to_el0(): no file");
+	}
+	else {
+		el1_switch_el0(process->reg.sp, process->code);
+	}
+}
+
+void el1_exec_lab7_a1(char *img_name)
+{
+	uart_puts("el1_exec_lab7_a1() begin\n");
+
+	char *file_addr = cpio_get_addr(img_name);		
+	unsigned long app_size = find_app_size(img_name);
+	uart_puts("\tuser address : ");
+	uart_put_hex((unsigned long)file_addr);
+	uart_puts("\tuser prog size : ");
+	uart_put_int(app_size);
+	uart_puts("\n");
+
+	process_init();
+	Task *process = process_create(file_addr, app_size);
+	sche_push(process, &sche_proc);				// push into rq
+
+
+	// init user's work directory be root dir
+	process->dir_node = rootfs->root;
+	// int ret = vfs_lookup("/", &process->dir_node);
+	// if (ret != 0)
+	// {
+	// 	uart_puts("ERROR in el1_exec_lab7()_a1:\tcan't find '/'\n");
+	// }
+
+	// open uart special file by default
+    // stdin (fd 0), stdout (fd 1), and stderr (fd 2) or not
+	file_t *uart = (file_t *)kmalloc(sizeof(file_t));
+	vfs_open("/dev/uart", 0, &uart);
+    for (int i = 0; i < FD_RESERVED; i++)
+    {
+        process->fd_table[i] = uart;
+    }
+
+	uart_puts("loading user prog...\n");
+	if (!str_cmp("no file", file_addr)) {
+		uart_puts("ERROR in el1.c, el1_switch_to_el0(): no file");
+	}
+	else {
+		el1_switch_el0(process->reg.sp, process->code);
+	}
+}
+
+
+void el1_exec_lab7_a2(char *pathname)
+{
+	uart_puts("el1_exec_lab7_a2() begin\n");
+
+	// get directory name & img_name
+	int comp_count = str_token_count(pathname, '/');
+	char *comp_names[comp_count];
+    int max_name_len = 64;
+	for (int j = 0; j < comp_count; j++) {
+		comp_names[j] = (char *)kmalloc(max_name_len);
+	}
+    str_token(pathname, comp_names, '/');
+    char *img_name = comp_names[comp_count - 1];
+
+	char *file_addr = cpio_get_addr(img_name);		
+	unsigned long app_size = find_app_size(img_name);
+	uart_puts("\tuser address : ");
+	uart_put_hex((unsigned long)file_addr);
+	uart_puts("\tuser prog size : ");
+	uart_put_int(app_size);
+	uart_puts("\n");
+
+	process_init();
+	Task *process = process_create(file_addr, app_size);
+	sche_push(process, &sche_proc);				// push into rq
+
+
+	// init user's work directory
+	int ret = vfs_lookup(comp_names[0], &process->dir_node);	// comp_names[0] should be '/initramfs'
+	if (ret != 0)
+	{
+		uart_puts("ERROR in el1_exec_lab7_a2():\tcan't find '/initramfs'\n");
+	}
+
+	// open uart special file by default
+    // stdin (fd 0), stdout (fd 1), and stderr (fd 2) or not
+	file_t *uart = (file_t *)kmalloc(sizeof(file_t));
+	vfs_open("/dev/uart", 0, &uart);
+    for (int i = 0; i < FD_RESERVED; i++)
+    {
+        process->fd_table[i] = uart;
+    }
+
 	uart_puts("loading user prog...\n");
 	if (!str_cmp("no file", file_addr)) {
 		uart_puts("ERROR in el1.c, el1_switch_to_el0(): no file");

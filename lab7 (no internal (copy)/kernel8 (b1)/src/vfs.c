@@ -6,19 +6,6 @@
 #include "process.h"
 #include "scheduler.h"
 
-char *get_last_component_name(const char *pathname) {
-    int len = str_len(pathname);
-    char *res;
-    int idx = len - 1;  // begin from last char
-    while (*(pathname + idx) != '/' && idx > 0)
-    {
-        *res++ = *(pathname + idx);
-        idx--;
-    }
-    *res = '\0';
-    return res;
-}
-
 //----------------------------------------------------------//
 //                     virtual file system                  //
 //----------------------------------------------------------//
@@ -43,13 +30,16 @@ void rootfs_init() {
 	uart_puts("rootfs_init finish\n");
 }
 
-
 int register_filesystem(struct filesystem* fs) {
     // register the file system to the kernel.
     // you can also initialize memory pool of the file system here.
     if (!str_cmp("tmpfs", fs->name))
     {
         return tmpfs_register();
+    }
+    if (!str_cmp("initramfs", fs->name))
+    {
+        return initramfs_register();
     }
     return -1;
 }
@@ -85,15 +75,22 @@ int vfs_mount(const char* target, const char* filesystem) {
     // register fs
     register_filesystem(fs);
 
+    // find target vnode
     int ret;
     vnode_t *v_tar; 
-    ret = vfs_traversal(target, rootfs->root, &v_tar);
-    if (ret != 0)
+    if (target[0] == '/' && target[1] == '\0')
     {
-        uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
+        v_tar = rootfs->root;   // mount fs on root
+    }
+    else
+    {
+        if (target[0] == '/')
+            target++;           // remove '/'
+        ret = vfs_traversal(target, rootfs->root, &v_tar);
+        if (ret != 0)
+            uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
     }
     
-
     // mount up fs
     struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount *));
     mount_fs->fs = fs;
@@ -107,13 +104,44 @@ int vfs_mount(const char* target, const char* filesystem) {
 int vfs_chdir(const char *pathname) {
     vnode_t *v_tar;
     int ret = vfs_lookup(pathname, &v_tar);
-    if (ret == 0)
+    if (ret == 0 && v_tar->type == DIRECTORY)
     {
         Task *cur_task = sche_running_proc(&sche_proc);
         cur_task->dir_node = v_tar;
         return 0;
     }
+    else if (ret != 0) {
+        uart_puts("ERROR in vfs_chdir():\tcan't find the vnode\n");
+        return -1;
+    }
+    else if (ret == 0 && v_tar->type == REGULAR_FILE) {
+        uart_puts("ERROR in vfs_chdir():\tfind the vnode, but it's regular file vnode\n");
+        return -1;
+    }
     else {
+        uart_puts("ERROR in vfs_chdir():\tunknown error\n");
+        return -1;
+    }
+}
+
+int vfs_mknod(const char *pathname, enum dev_type dev_type){
+    if (dev_type == UART)
+    {
+        vnode_t *dev;
+        
+        // get dev vnode 
+        vfs_lookup(pathname, &dev);
+
+        sf_uart_register();
+        return sf_uart_create(dev);
+    }
+    else if (dev_type == FRAME_BUFFER)
+    {
+        return -1;
+    }
+    else
+    {
+        uart_puts("ERROR in vfs_mknod():\t unsupporting device\n");
         return -1;
     }
 }
@@ -133,6 +161,14 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     vnode_t *node;          // will be directory/file vnode
     // 1. Lookup pathname
     int ret = vfs_lookup(pathname, &node);
+
+    // special file
+    if (ret == 0 && node->type == SPECIAL_FILE)
+    {
+        *file_tar = node->file;
+        return 0;
+    }
+    
 
     // 2. Create a new file handle for this vnode if found.
     if (ret == 0 && node->type == REGULAR_FILE)
@@ -208,60 +244,12 @@ int vfs_mkdir(const char* pathname) {
         vnode_t *target = (vnode_t *)kmalloc(sizeof(vnode_t));
         return dir_node->v_ops->mkdir(dir_node, &target, comp_names[comp_count - 1]);
     }
-
-    return -1;
+    else
+    {
+        uart_puts("WARNING in vfs_mkdir():\tdirectory vnode has been existing\n");
+        return -1;
+    }
 }
-
-// int vfs_lookup(const char* pathname, vnode_t** v_tar) {
-//     // get component name
-// 	int comp_count = str_token_count(pathname, '/');
-// 	char *comp_names[comp_count];
-//     int max_name_len = 64;
-// 	for (int j = 0; j < comp_count; j++) {
-// 		comp_names[j] = (char *)kmalloc(max_name_len);
-// 	}
-//     str_token(pathname, comp_names, '/');
-    
-//     if (pathname[0] == '/')     // absulute path
-//     {
-//         vnode_t *vnode_itr = rootfs->root;
-//         for (int i = 0; i < comp_count; i++) {
-//             vnode_t *next_vnode;
-//             int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
-//             if(ret != 0) {              // can't find
-//                 *v_tar = vnode_itr;     // return directory node
-//                 return ret;             
-//             }
-//             vnode_itr = next_vnode;
-//         }
-//         *v_tar = vnode_itr;
-//         return 0;
-//     }
-//     else                            // relative path
-//     {
-//         if (pathname[0] == '\0')    // return root vnode
-//         {
-//             Task *cur = sche_running_proc(&sche_proc);
-//             *v_tar = cur->dir_node->mount->root;
-//             return 0;
-//         }
-//         else if (pathname[0] == '.')
-//         {
-            
-//         }
-//         else if (pathname[0] == '.' && pathname[1] == '.')
-//         {
-
-//         }
-//         uart_puts("\tERROR in vfs_lookup(): error format of pathname\n");
-//         return -1;
-//     }
-      
-//     // free tokens
-//     // for (int j = 0; j < comp_count; j++) {
-// 	// 	kfree(comp_names[j]);
-// 	// }  
-// }
 
 int vfs_lookup(const char* pathname, vnode_t** v_tar) {
     // get component name
@@ -274,19 +262,23 @@ int vfs_lookup(const char* pathname, vnode_t** v_tar) {
     str_token(pathname, comp_names, '/');
     
     vnode_t *vnode_itr;
+    int i;
     if (pathname[0] == '/')     // absulute path
     {
         vnode_itr = rootfs->root;
+        i = 0;
     }
     else                        // relative path
     {
         Task *cur_task = sche_running_proc(&sche_proc);
+        i = 1;      // skip '.' or '..' in pathname  
+
         if (pathname[0] == '\0')                            // return root vnode                          
         {
             *v_tar = cur_task->dir_node->mount->root;
             return 0;
         } 
-        else if (pathname[0] == '.')                        // return current dir
+        else if (pathname[0] == '.'&& pathname[1] != '.')   // return current dir
         {
             vnode_itr = cur_task->dir_node;
         }
@@ -301,7 +293,7 @@ int vfs_lookup(const char* pathname, vnode_t** v_tar) {
         }
     }
 
-    for (int i = 0; i < comp_count; i++) {
+    for (; i < comp_count; i++) {
         vnode_t *next_vnode;
         int ret = vnode_itr->v_ops->lookup(vnode_itr, &next_vnode, comp_names[i]);
         if(ret != 0) {              // can't find
@@ -411,9 +403,10 @@ int tmpfs_create_file(vnode_t* file_node, file_t** target) {
     }
     else
     {
-        //*target = file_node->file;
-        uart_puts("\tERROR tmpfs_create_file(): file existing\n");
-        return -1;
+        *target = file_node->file;
+        //(*target)->status = FILE_EXIST;
+        uart_puts("\tWARNING tmpfs_create_file(): file existing\n");
+        return 0;
     }
 }
 
@@ -469,6 +462,7 @@ int tmpfs_open(vnode_t* file_node, file_t** target) {
 
 int tmpfs_close(file_t* file) {
     file->status = FILE_NOT_EXIST;
+    file->vnode->file = 0;
     //kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
     //kfree(file->vnode);
     kfree(file);
@@ -517,3 +511,250 @@ int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name)
     return 0;
 }
 //-------------------------------------//
+
+
+
+//----------------------------------------------------------//
+//                         initramfs                        //
+//----------------------------------------------------------//
+file_op_t *initramfs_f_op;
+vnode_op_t *initramfs_v_op;
+
+void initramfs_init() {
+    vfs_mkdir("/initramfs");
+	vfs_mount("/initramfs", "initramfs");    
+ }
+
+int initramfs_register() {
+    initramfs_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
+    initramfs_f_op->open = initramfs_open;
+    initramfs_f_op->close = initramfs_close;
+    initramfs_f_op->read = initramfs_read;
+    initramfs_f_op->write = initramfs_write;
+
+    initramfs_v_op = (vnode_op_t *)kmalloc(sizeof(vnode_op_t));
+    initramfs_v_op->create = initramfs_create;
+    initramfs_v_op->lookup = initramfs_lookup;
+    initramfs_v_op->mkdir = initramfs_mkdir;
+
+    return 0;
+}
+
+vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
+    vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
+    if (parent != 0)
+    {
+        v->mount = parent->mount;
+    }
+    else
+    {
+        v->mount = rootfs;
+    }
+    v->f_ops = initramfs_f_op;
+    v->v_ops = initramfs_v_op;
+    v->internal = 0;
+
+    v->file = 0;
+    v->parent = parent;
+    str_cpy(v->name, name);
+    v->type = type;
+    list_init(&v->siblings);
+    list_init(&v->subdirs);
+    if (parent != 0)
+    {
+        list_push(&parent->subdirs, &v->siblings);
+    }
+
+    // debug message
+    uart_puts("initramfs_create_vnode():\n\tvnode at 0x");
+    uart_put_hex((unsigned long)v);
+    if (parent != 0) {
+        uart_puts("\tparent->subdirs at 0x");
+        uart_put_hex((unsigned long)&parent->subdirs);
+    }
+    uart_puts("\tv->siblings at 0x");
+    uart_put_hex((unsigned long)&v->siblings);
+    uart_puts(",\tsubdirs at 0x");
+    uart_put_hex((unsigned long)&v->subdirs);
+    uart_puts("\n");
+    return v;
+}
+
+int initramfs_create_file(vnode_t* file_node, file_t** target) {
+    if (file_node->file == 0 || (*target)->status == FILE_NOT_EXIST)   // file not existing
+    {
+        // create file
+        *target = (file_t *)kmalloc(sizeof(file_t));
+        (*target)->vnode = file_node;
+        (*target)->f_ops = file_node->f_ops;
+        (*target)->f_pos = 0;
+        (*target)->size = 0;
+        (*target)->status = FILE_EXIST;
+
+        file_node->file = *target;
+
+        // won't into the if, if the file wasn't opened first time
+        if (file_node->internal == 0)   // first time to establish the file
+        {
+            // alloc space for file's content
+            inter_tmpfs_t *inter = (inter_tmpfs_t *)kmalloc(sizeof(inter_tmpfs_t));
+            inter->file_content = (char *)kmalloc(TMPFS_MAX_FILE_SIZE);
+            file_node->internal = inter;
+        }
+
+        return 0;
+    }
+    else
+    {
+        *target = file_node->file;
+        //(*target)->status = FILE_EXIST;
+        uart_puts("\tWARNING initramfs_create_file(): file existing\n");
+        return 0;
+    }
+}
+
+//---------- file operation ----------//
+int initramfs_write(file_t* file, const void* buf, unsigned long len) {
+    return -1;
+}
+
+int initramfs_read(file_t* file, void* buf, unsigned long len) {
+    char *src = ((inter_tmpfs_t *)(file->vnode->internal))->file_content;
+    char *des = (char *)buf;
+    src += file->f_pos;
+    char *src_origin = src;
+
+    while((len--) > 0 && *src != EOF){
+		*des++ = *src++;
+	}
+
+    unsigned long read_size = src - src_origin;
+    file->f_pos += read_size;
+
+    return read_size;
+}
+
+/*
+    open the vnode, create file to the vnode
+*/
+int initramfs_open(vnode_t* file_node, file_t** target) {
+    if (file_node->type == REGULAR_FILE)
+    {
+        return initramfs_create_file(file_node, target); 
+    }
+    else
+    {
+        uart_puts("\tERROR in initramfs_open(): can't open directory vnode\n");
+        return -1;
+    }
+}
+
+int initramfs_close(file_t* file) {
+    file->status = FILE_NOT_EXIST;
+    file->vnode->file = 0;
+    //kfree(((inter_tmpfs_t *)file->vnode->internal)->file_content);
+    //kfree(file->vnode);
+    kfree(file);
+    return 0;
+}
+//-------------------------------------//
+
+
+//---------- vnode operation ----------//
+int initramfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    // finding vnode in dir_node's child
+    for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
+    {
+        vnode_t *child = list_entry(sibling, struct vnode, siblings);
+        if (!str_cmp(child->name, component_name))
+        {
+            *v_tar = child;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int initramfs_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
+    return -1; 
+}
+
+int initramfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
+    return -1;
+}
+//-------------------------------------//
+
+
+//----------------------------------------------------------//
+//                    uart special file                     //
+//----------------------------------------------------------//
+file_op_t *uart_f_op;
+vnode_op_t *uart_v_op;
+/*
+    create uart's vnode & file below dev vnode
+*/
+int sf_uart_create(vnode_t *dev) {
+    // create uart's vnode
+    vnode_t *u_node = (vnode_t *)kmalloc(sizeof(vnode_t));
+    u_node->mount = dev->mount;
+    u_node->f_ops = uart_f_op;
+    u_node->v_ops = uart_v_op;
+    u_node->internal = 0;
+
+    u_node->file = 0;
+    u_node->parent = dev;
+    str_cpy(u_node->name, "uart");
+    u_node->type = SPECIAL_FILE;
+    list_init(&u_node->siblings);
+    list_init(&u_node->subdirs);
+    list_push(&dev->subdirs, &u_node->siblings);
+
+    // create uart's file
+    file_t *u_file = (file_t *)kmalloc(sizeof(file_t));
+    u_file->vnode = u_node;
+    u_file->f_ops = u_node->f_ops;
+    u_file->f_pos = 0;
+    u_file->size = 0;
+    u_file->status = FILE_EXIST;
+
+    u_node->file = u_file;
+
+    return 0;
+}
+
+int sf_uart_register() {
+    uart_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
+    uart_f_op->open = 0;
+    uart_f_op->close = 0;
+    uart_f_op->read = sf_uart_read;
+    uart_f_op->write = sf_uart_write;
+
+    uart_v_op = (vnode_op_t *)kmalloc(sizeof(vnode_op_t));
+    uart_v_op->create = 0;
+    uart_v_op->lookup = 0;
+    uart_v_op->mkdir = 0;
+
+    return 0;
+}
+
+int sf_uart_write(file_t* file, const void* buf, unsigned long len) {
+    char *src = (char *)buf;
+    while (*src != '\0' && len > 0)
+    {
+        uart_send(*src);
+        src++;
+        len--;
+    }
+    return src - (char *)buf;
+}
+
+int sf_uart_read(file_t* file, void* buf, unsigned long len) {
+    char *des = (char *)buf;
+    while (len > 0)
+    {
+        *des = uart_getc_raw();
+        des++;
+        len--;
+    }
+    return des - (char *)buf;
+}

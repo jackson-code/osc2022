@@ -178,8 +178,9 @@ void sys_open(struct trapframe* trapframe) {
         uart_puts("ERROR in sys_open():\t can't open the file's vnode\n");
         return;
     }
-
-    for (int i = 0; i < TASK_MAX_OPEN_FILES; i++)
+    
+    // open regular file
+    for (int i = FD_RESERVED; i < TASK_MAX_OPEN_FILES; i++)
     {
         if (cur_task->fd_table[i] == 0)
         {

@@ -6,4 +6,7 @@
 void el1_switch_to_el0(char *img_name);
 void el1_exec(char * img_name, char *argv[]);
 
+void el1_exec_lab7_a1(char *img_name);
+void el1_exec_lab7_a2(char *pathname);
+
 #endif

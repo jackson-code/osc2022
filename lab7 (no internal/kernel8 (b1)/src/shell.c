@@ -217,7 +217,12 @@ void shell_execute(char *cmd)
 		char *argv[] = {"no", "argv"};
 		el1_exec("app2.img", argv);	
 	}
-	
+	else if(!str_cmp(keyword, "a1"))
+	{
+		vfs_mkdir("/dev");
+		vfs_mknod("/dev/uart", UART);
+		el1_exec_lab7_a1("app2.img");
+	}
 	
 	else {
 		uart_puts("ERROR: unsupport shell command\n");

@@ -32,30 +32,9 @@ void main()
 	rootfs_init();
 
 	// test basic 4
-	vfs_mkdir("/initramfs");
-	vfs_mount("/initramfs", "initramfs");
-
-
-
-	// file_t *fd = (file_t *)kmalloc(sizeof(file_t));
-	// vfs_open("/ab", O_CREAT, &fd);
-	// vfs_open("/ab", O_CREAT, &fd);
-	// vfs_close(fd);
-
-	// char *buf_write = "apple";
-	// char buf_read[4096]; 
-
-	// fd = (file_t *)kmalloc(sizeof(file_t));
-	// vfs_open("/ab", O_CREAT, &fd);
-	// vfs_open("/ab", O_CREAT, &fd);
-
-	// vfs_write(fd, buf_write, 123);
-	// vfs_close(fd);
-
-	// fd = (file_t *)kmalloc(sizeof(file_t));
-	// vfs_open("/ab", O_CREAT, &fd);
-	// vfs_read(fd, buf_read, 3);
-	// vfs_read(fd, buf_read+3, 3);
+	uart_puts("***********TEST INITRAMFS********\n");
+	//initramfs_init();
+	uart_puts("***********TEST FINISH********\n");
 
 
 	int MAXCMD = 20;

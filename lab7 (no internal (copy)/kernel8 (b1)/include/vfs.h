@@ -6,6 +6,7 @@
 #define EOF   (0xff)
 
 #define VFS_MAX_PATHNAME          (256)
+#define FD_RESERVED               (3) // stdin (fd 0), stdout (fd 1), and stderr (fd 2)
 
 
 //----------------------------------------------------------//
@@ -13,11 +14,17 @@
 //----------------------------------------------------------//
 
 // flag
-#define O_CREAT (1)
+#define O_CREAT (00000100)
+
+enum dev_type {
+	UART = 1,
+	FRAME_BUFFER = 2,
+};
 
 enum vnode_type {
     REGULAR_FILE = 1,
     DIRECTORY = 2,
+	SPECIAL_FILE = 3,
 };
 
 typedef struct vnode {
@@ -50,30 +57,30 @@ typedef struct file {
 }file_t;
 
 struct mount {
-  struct vnode* root;
-  struct filesystem* fs;
+    struct vnode* root;
+    struct filesystem* fs;
 };
 
 typedef struct filesystem {
-  const char* name;
-  int (*setup_mount)(struct filesystem* fs, struct mount* mount);
+    const char* name;
+    int (*setup_mount)(struct filesystem* fs, struct mount* mount);
 }filesystem_t;
 
 typedef struct file_operations {
-  int (*write)(struct file* file, const void* buf, unsigned long len);
-  int (*read)(struct file* file, void* buf, unsigned long len);
-  int (*open)(struct vnode* file_node, struct file** target);
-  int (*close)(struct file* file);
-  //long lseek64(struct file* file, long offset, int whence);
+    int (*write)(struct file* file, const void* buf, unsigned long len);
+    int (*read)(struct file* file, void* buf, unsigned long len);
+    int (*open)(struct vnode* file_node, struct file** target);
+    int (*close)(struct file* file);
+    //long lseek64(struct file* file, long offset, int whence);
 }file_op_t;
 
 typedef struct vnode_operations {
-  int (*lookup)(struct vnode* dir_node, struct vnode** target,
+    int (*lookup)(struct vnode* dir_node, struct vnode** target,
+                  const char* component_name);
+    int (*create)(struct vnode* dir_node, struct vnode** target,
+                  const char* component_name);
+    int (*mkdir)(struct vnode* dir_node, struct vnode** target,
                 const char* component_name);
-  int (*create)(struct vnode* dir_node, struct vnode** target,
-                const char* component_name);
-  int (*mkdir)(struct vnode* dir_node, struct vnode** target,
-              const char* component_name);
 }vnode_op_t;
 
 struct mount* rootfs;
@@ -81,6 +88,8 @@ struct mount* rootfs;
 void rootfs_init();
 int register_filesystem(struct filesystem* fs);
 int vfs_mount(const char* target, const char* filesystem);
+int vfs_chdir(const char *pathname);
+int vfs_mknod(const char *pathname, enum dev_type dev);
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, struct file** target);
 int vfs_close(struct file* file);
@@ -118,5 +127,32 @@ int tmpfs_lookup(vnode_t* dir_node, vnode_t** target, const char* component_name
 int tmpfs_create(vnode_t* dir_node, vnode_t** target, const char* component_name);
 int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
 
+
+//----------------------------------------------------------//
+//                         initramfs                        //
+//----------------------------------------------------------//
+void initramfs_init();
+int initramfs_register();
+vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type);
+int initramfs_create_file(vnode_t* file_node, file_t** target);
+//---------- file operation ----------//
+int initramfs_write(file_t* file, const void* buf, unsigned long len);
+int initramfs_read(file_t* file, void* buf, unsigned long len);
+int initramfs_open(vnode_t* file_node, file_t** target);
+int initramfs_close(file_t* file);
+//---------- vnode operation ----------//
+int initramfs_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
+int initramfs_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name);
+int initramfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
+//-------------------------------------//
+
+//----------------------------------------------------------//
+//                    uart special file                     //
+//----------------------------------------------------------//
+int sf_uart_create(vnode_t *dev);
+int sf_uart_register();
+// file operation
+int sf_uart_write(file_t* file, const void* buf, unsigned long len);
+int sf_uart_read(file_t* file, void* buf, unsigned long len);
 
 #endif
