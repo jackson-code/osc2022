@@ -36,7 +36,9 @@ void main()
 	
 	
 
-	// vfs_mkdir("/dev");
+	vfs_mkdir("/dev");
+	//vfs_mknod("/dev/uart", UART); // will irq error!
+
 	// vfs_mknod("/dev/framebuffer", FRAME_BUFFER);
 	
 	initramfs_init();

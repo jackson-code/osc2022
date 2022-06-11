@@ -6,6 +6,7 @@
 #include "process.h"
 #include "scheduler.h"
 #include "mailbox.h"
+#include "cpio.h"
 
 file_op_t *initramfs_f_op;
 vnode_op_t *initramfs_v_op;
@@ -107,6 +108,7 @@ int vfs_mount(const char* target, const char* filesystem) {
     {
         v_tar->f_ops = initramfs_f_op;
         v_tar->v_ops = initramfs_v_op;
+        initramfs_setup_mount(fs, mount_fs);
     }
     
 
@@ -198,10 +200,10 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
         //str_cpy(node->name, file_name);
         return node->f_ops->open(node, file_tar);
     } 
-    else if (!str_cmp(node->name, "initramfs"))
-    {
-        return node->f_ops->open(node, file_tar);
-    } 
+    // else if (!str_cmp(node->name, "initramfs"))
+    // {
+    //     return node->f_ops->open(node, file_tar);
+    // } 
     else
     // 3. Create a new file(and vnode) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
@@ -334,7 +336,7 @@ int vfs_lookup(const char* pathname, vnode_t** v_tar) {
 }
 
 int vfs_create(vnode_t* dir_node, vnode_t** file_node, const char* component_name) {
-    return rootfs->root->v_ops->create(dir_node, file_node, component_name);
+    return dir_node->v_ops->create(dir_node, file_node, component_name);
 }
 
 //----------------------------------------------------------//
@@ -564,47 +566,61 @@ int initramfs_register() {
     return 0;
 }
 
-// vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
-//     vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
-//     if (parent != 0)
-//     {
-//         v->mount = parent->mount;
-//     }
-//     else
-//     {
-//         v->mount = rootfs;
-//     }
-//     v->f_ops = initramfs_f_op;
-//     v->v_ops = initramfs_v_op;
-//     v->internal = 0;
+vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type) {
+    vnode_t *v = (vnode_t *)kmalloc(sizeof(vnode_t));
+    if (parent != 0)
+    {
+        v->mount = parent->mount;
+    }
+    else
+    {
+        v->mount = rootfs;
+    }
+    v->f_ops = initramfs_f_op;
+    v->v_ops = initramfs_v_op;
+    v->internal = 0;
 
-//     v->file = 0;
-//     v->parent = parent;
-//     str_cpy(v->name, name);
-//     v->type = type;
-//     list_init(&v->siblings);
-//     list_init(&v->subdirs);
-//     if (parent != 0)
-//     {
-//         list_push(&parent->subdirs, &v->siblings);
-//     }
+    v->file = 0;
+    v->parent = parent;
+    str_cpy(v->name, name);
+    v->type = type;
+    list_init(&v->siblings);
+    list_init(&v->subdirs);
+    if (parent != 0)
+    {
+        // list_push(&parent->subdirs, &v->subdirs);
+        list_push(&parent->subdirs, &v->siblings);
+    }
+    uart_puts("tmpfs_create_vnode():\n\tvnode at 0x");
+    uart_put_hex((unsigned long)v);
+    if (parent != 0) {
+        uart_puts("\tparent->subdirs at 0x");
+        uart_put_hex((unsigned long)&parent->subdirs);
+    }
+    uart_puts("\tv->siblings at 0x");
+    uart_put_hex((unsigned long)&v->siblings);
+    uart_puts(",\tsubdirs at 0x");
+    uart_put_hex((unsigned long)&v->subdirs);
+    uart_puts("\n");
+    return v;
+}
 
-//     // debug message
-//     uart_puts("initramfs_create_vnode():\n\tvnode at 0x");
-//     uart_put_hex((unsigned long)v);
-//     if (parent != 0) {
-//         uart_puts("\tparent->subdirs at 0x");
-//         uart_put_hex((unsigned long)&parent->subdirs);
-//     }
-//     uart_puts("\tv->siblings at 0x");
-//     uart_put_hex((unsigned long)&v->siblings);
-//     uart_puts(",\tsubdirs at 0x");
-//     uart_put_hex((unsigned long)&v->subdirs);
-//     uart_puts("\n");
-//     return v;
-// }
+int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount)
+{
+    char *img_name = (char *)kmalloc(100);
+    cpio_get_pathname(img_name);
 
-int initramfs_create_file(vnode_t* file_node, file_t** target) {
+    char *img_addr = cpio_get_addr(img_name);		
+	unsigned long img_size = find_app_size(img_name);
+
+    vnode_t *img_node = initramfs_create_vnode(img_name, _mount->root, REGULAR_FILE);
+    file_t *img_file;
+    initramfs_create_file(img_node, &img_file, img_size, img_addr);
+
+    return 0;
+}
+
+int initramfs_create_file(vnode_t* file_node, file_t** target, unsigned long img_size, char *img_addr) {
     uart_puts("\t***** initramfs_create_file *****\n");
 
     if (file_node->file == 0 || (*target)->status == FILE_NOT_EXIST)   // file not existing
@@ -614,7 +630,7 @@ int initramfs_create_file(vnode_t* file_node, file_t** target) {
         (*target)->vnode = file_node;
         (*target)->f_ops = file_node->f_ops;
         (*target)->f_pos = 0;
-        (*target)->size = 0;
+        (*target)->size = img_size;
         (*target)->status = FILE_EXIST;
 
         file_node->file = *target;
@@ -623,8 +639,8 @@ int initramfs_create_file(vnode_t* file_node, file_t** target) {
         if (file_node->internal == 0)   // first time to establish the file
         {
             // alloc space for file's content
-            inter_tmpfs_t *inter = (inter_tmpfs_t *)kmalloc(sizeof(inter_tmpfs_t));
-            inter->file_content = (char *)kmalloc(TMPFS_MAX_FILE_SIZE);
+            inter_initramfs_t *inter = (inter_initramfs_t *)kmalloc(sizeof(inter_initramfs_t));
+            inter->file_content = img_addr;
             file_node->internal = inter;
         }
 
@@ -648,7 +664,7 @@ int initramfs_write(file_t* file, const void* buf, unsigned long len) {
 int initramfs_read(file_t* file, void* buf, unsigned long len) {
     uart_puts("\t***** initramfs_read *****\n");
 
-    char *src = ((inter_tmpfs_t *)(file->vnode->internal))->file_content;
+    char *src = ((inter_initramfs_t *)(file->vnode->internal))->file_content;
     char *des = (char *)buf;
     src += file->f_pos;
     char *src_origin = src;
@@ -669,9 +685,17 @@ int initramfs_read(file_t* file, void* buf, unsigned long len) {
 int initramfs_open(vnode_t* file_node, file_t** target) {
     uart_puts("\t***** initramfs_open *****\n");
     
-    if (file_node->type == DIRECTORY)   // iniramfs have no create method, so no regular file
+    if (file_node->type == REGULAR_FILE)  
     {
-        return initramfs_create_file(file_node, target); 
+        file_t *f = file_node->file;
+        (*target)->f_ops = f->f_ops;
+        (*target)->f_pos = f->f_pos;
+        (*target)->flags = f->flags;
+        (*target)->size = f->size;
+        (*target)->status = f->status;
+        (*target)->vnode = f->vnode;
+        //return initramfs_create_file(file_node, target);
+        return 0; 
     }
     else
     {

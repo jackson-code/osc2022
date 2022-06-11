@@ -131,10 +131,17 @@ int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name)
 //----------------------------------------------------------//
 //                         initramfs                        //
 //----------------------------------------------------------//
+typedef struct internal_initramfs {
+   char *file_content;
+    // char buf[TMPFS_MAX_FILE_SIZE];
+}inter_initramfs_t;
+
 void initramfs_init();
 int initramfs_register();
 vnode_t *initramfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type);
-int initramfs_create_file(vnode_t* file_node, file_t** target);
+int initramfs_create_file(vnode_t* file_node, file_t** target, unsigned long img_size, char *img_addr);
+int initramfs_setup_mount(struct filesystem *fs, struct mount *_mount);
+//int initramfs_create_file(vnode_t* file_node, file_t** target);
 //---------- file operation ----------//
 int initramfs_write(file_t* file, const void* buf, unsigned long len);
 int initramfs_read(file_t* file, void* buf, unsigned long len);

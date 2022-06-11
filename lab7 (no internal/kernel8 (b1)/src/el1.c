@@ -169,11 +169,15 @@ void el1_exec_lab7_test(char *pathname)
 
 
 	// init user's work directory
-	int ret = vfs_lookup("/initramfs", &process->dir_node);	// comp_names[0] should be '/initramfs'
+	int ret = vfs_lookup("/initramfs", &process->dir_node);	
 	if (ret != 0)
 	{
 		uart_puts("ERROR in el1_exec_lab7_a2():\tcan't find '/initramfs'\n");
 	}
+	//file_t *f_img = (file_t *)kmalloc(sizeof(file_t));
+	//ret = vfs_open(pathname, O_CREAT, f_img);
+	//vfs_mount(pathname, "initramfs");
+	
 
 	// open uart special file by default
     // stdin (fd 0), stdout (fd 1), and stderr (fd 2) or not
@@ -183,6 +187,7 @@ void el1_exec_lab7_test(char *pathname)
     {
         process->fd_table[i] = uart;
     }
+	
 
 	uart_puts("loading user prog...\n");
 	if (!str_cmp("no file", file_addr)) {

@@ -14,6 +14,7 @@
         "property.h": "c",
         "mmio.h": "c",
         "initramfs.h": "c",
-        "mailbox.h": "c"
+        "mailbox.h": "c",
+        "cpio.h": "c"
     }
 }

@@ -58,6 +58,27 @@ void cpio_list(){
 	}
 }
 
+void cpio_get_pathname(char *get_path){
+	char *cur_addr_byte = CPIO_ADDR;														// addr in bytes
+	struct cpio_new_header *cur_addr_struct = (struct cpio_new_header *)cur_addr_byte;		// addr in struct
+	struct cpio_size_info size_info;
+	
+	// go through all cpio archive, get all pathname
+	while (1) {
+		char *pathname = (char *)(cur_addr_struct + 1);
+		if (!str_cmp("TRAILER!!!", pathname)) break;		// end of the archive
+		uart_puts(pathname);
+		
+        str_cpy(get_path, pathname);
+
+		// get total length of the file
+		get_size_info(cur_addr_struct, &size_info);
+		// point to next file
+		cur_addr_byte += size_info.offset;
+		cur_addr_struct = (struct cpio_new_header *)cur_addr_byte;
+	}
+}
+
 void cpio_cat(char *args){
     char *cur_addr_byte = CPIO_ADDR;													// addr in byte
     struct cpio_new_header *cur_addr_struct = (struct cpio_new_header* )cur_addr_byte;	// addr in struct
