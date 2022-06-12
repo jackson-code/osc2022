@@ -8,6 +8,7 @@
 #define VFS_MAX_PATHNAME          (256)
 #define FD_RESERVED               (3) // stdin (fd 0), stdout (fd 1), and stderr (fd 2)
 
+# define SEEK_SET 0
 
 //----------------------------------------------------------//
 //                     virtual file system                  //
@@ -90,6 +91,8 @@ int register_filesystem(struct filesystem* fs);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_chdir(const char *pathname);
 int vfs_mknod(const char *pathname, enum dev_type dev);
+long vfs_lseek64(struct file* file, long offset, int whence);
+int vfs_ioctl(struct file* framebuffer, unsigned long request, void *info);
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, struct file** target);
 int vfs_close(struct file* file);
@@ -157,21 +160,44 @@ int initramfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_n
 //----------------------------------------------------------//
 //                    uart special file                     //
 //----------------------------------------------------------//
-int sf_uart_create(vnode_t *dev);
+int sf_uart_mknod(vnode_t *dev);
 int sf_uart_register();
 //---------- file operation ----------//
 int sf_uart_write(file_t* file, const void* buf, unsigned long len);
 int sf_uart_read(file_t* file, void* buf, unsigned long len);
+int sf_uart_open(vnode_t* file_node, file_t** target);
+int sf_uart_close(file_t* file);
+//---------- vnode operation ----------//
+int sf_uart_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
+int sf_uart_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name);
+int sf_uart_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
+//-------------------------------------//
+
 
 //----------------------------------------------------------//
 //                framebuffer special file                  //
 //----------------------------------------------------------//
-int sf_fb_create(vnode_t *dev);
+struct framebuffer_info {
+    unsigned int width;
+    unsigned int height;
+    unsigned int pitch;
+    unsigned int isrgb;
+	unsigned char *lfb;                       /* raw frame buffer address */
+};
+
+int sf_fb_mknod(vnode_t *dev);
 int sf_fb_register();
+void sf_mailbox_init_framebuffer(vnode_t *fb_node);
 //---------- file operation ----------//
 int sf_fb_open(vnode_t* file_node, file_t** target);
 int sf_fb_close(file_t* file);
 int sf_fb_write(file_t* file, const void* buf, unsigned long len);
 int sf_fb_read(file_t* file, void* buf, unsigned long len);
+//---------- vnode operation ----------//
+int sf_fb_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
+int sf_fb_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name);
+int sf_fb_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
+//-------------------------------------//
+
 
 #endif

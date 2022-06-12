@@ -99,6 +99,14 @@ Task *process_fork(struct trapframe *trapframe)
 	// copy code section
 	//copy((char *)parent->code, (char *)child->code, 4096);
 
+	// set child's current working directory
+	child->dir_node = parent->dir_node;
+	// copy file description table
+	for (int i = 0; i < TASK_MAX_OPEN_FILES; i++)
+    {
+        child->fd_table[i] = parent->fd_table[i];
+    }
+
 	unsigned long task_offset = parent->trapframe.sp_el0 - (unsigned long)parent;
 	child->trapframe.sp_el0 = (unsigned long)child + task_offset;
 	

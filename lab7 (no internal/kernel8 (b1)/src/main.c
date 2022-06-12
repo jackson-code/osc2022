@@ -31,20 +31,15 @@ void main()
 
 	rootfs_init();
 
-	// test basic 4
-	uart_puts("***********TEST INITRAMFS********\n");
-	
-	
 
 	vfs_mkdir("/dev");
-	//vfs_mknod("/dev/uart", UART); // will irq error!
+	vfs_mknod("/dev/uart", UART); 
 
-	// vfs_mknod("/dev/framebuffer", FRAME_BUFFER);
+	vfs_mknod("/dev/framebuffer", FRAME_BUFFER);
 	
 	initramfs_init();
 	el1_exec_lab7_test("/initramfs/vfs1.img");
 
-	uart_puts("***********TEST FINISH********\n");
 
 	int MAXCMD = 20;
   	char cmd[MAXCMD]; 

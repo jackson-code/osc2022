@@ -7,6 +7,7 @@
 #include "scheduler.h"
 #include "mailbox.h"
 #include "cpio.h"
+#include "mailbox.h"
 
 file_op_t *initramfs_f_op;
 vnode_op_t *initramfs_v_op;
@@ -148,21 +149,17 @@ int vfs_mknod(const char *pathname, enum dev_type dev_type){
         vfs_lookup(pathname, &dev);
 
         sf_uart_register();
-        return sf_uart_create(dev);
+        return sf_uart_mknod(dev);
     }
     else if (dev_type == FRAME_BUFFER)
     {
-        mailbox_init_framebuffer();
-
         vnode_t *dev;
         
         // get dev vnode 
         vfs_lookup(pathname, &dev);
 
         sf_fb_register();
-        return sf_fb_create(dev);
-
-        return -1;
+        return sf_fb_mknod(dev);
     }
     else
     {
@@ -200,10 +197,6 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
         //str_cpy(node->name, file_name);
         return node->f_ops->open(node, file_tar);
     } 
-    // else if (!str_cmp(node->name, "initramfs"))
-    // {
-    //     return node->f_ops->open(node, file_tar);
-    // } 
     else
     // 3. Create a new file(and vnode) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
@@ -248,6 +241,32 @@ int vfs_read(struct file* file, void* buf, unsigned long len) {
     }
     uart_puts("\tERROR in vfs_read(): file not existing\n");
     return -1;
+}
+
+long vfs_lseek64(struct file* file, long offset, int whence) {
+    if (whence == SEEK_SET)
+    {
+        file->f_pos = offset;
+        return file->f_pos;
+    }
+    else
+    {
+        uart_puts("ERROR in vfs_lseek64(): unsupport whence\n");
+        return 0;
+    }
+}
+
+int vfs_ioctl(struct file* fb_file, unsigned long request, void *info) {
+    if(request == 0)
+    {
+        struct framebuffer_info *get_fb_info = info;
+        struct framebuffer_info *fb_info = (struct framebuffer_info *)fb_file->vnode->internal;
+        get_fb_info->height = fb_info->height;
+        get_fb_info->isrgb = fb_info->isrgb;
+        get_fb_info->pitch = fb_info->pitch;
+        get_fb_info->width = fb_info->width;
+    }
+    return 0;
 }
 //-------------------------------------//
 
@@ -754,7 +773,7 @@ vnode_op_t *uart_v_op;
 /*
     create uart's vnode & file below dev vnode
 */
-int sf_uart_create(vnode_t *dev) {
+int sf_uart_mknod(vnode_t *dev) {
     // create uart's vnode
     vnode_t *u_node = (vnode_t *)kmalloc(sizeof(vnode_t));
     u_node->mount = dev->mount;
@@ -785,17 +804,37 @@ int sf_uart_create(vnode_t *dev) {
 
 int sf_uart_register() {
     uart_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
-    uart_f_op->open = 0;
-    uart_f_op->close = 0;
+    uart_f_op->open = sf_uart_open;
+    uart_f_op->close = sf_uart_close;
     uart_f_op->read = sf_uart_read;
     uart_f_op->write = sf_uart_write;
 
     uart_v_op = (vnode_op_t *)kmalloc(sizeof(vnode_op_t));
-    uart_v_op->create = 0;
-    uart_v_op->lookup = 0;
-    uart_v_op->mkdir = 0;
+    uart_v_op->create = sf_uart_create;
+    uart_v_op->lookup = sf_uart_lookup;
+    uart_v_op->mkdir = sf_uart_mkdir;
 
     return 0;
+}
+
+int sf_uart_open(vnode_t* file_node, file_t** target) {
+    return -1;
+}
+
+int sf_uart_close(file_t* file) {
+    return -1;
+}
+
+int sf_uart_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
+    return -1;
+}
+
+int sf_uart_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    return -1;
+}
+
+int sf_uart_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
+    return -1;
 }
 
 int sf_uart_write(file_t* file, const void* buf, unsigned long len) {
@@ -829,13 +868,13 @@ vnode_op_t *fb_v_op;
 /*
     create uart's vnode & file below dev vnode
 */
-int sf_fb_create(vnode_t *dev) {
+int sf_fb_mknod(vnode_t *dev) {
     // create framebuffer's vnode
     vnode_t *fb_node = (vnode_t *)kmalloc(sizeof(vnode_t));
     fb_node->mount = dev->mount;
     fb_node->f_ops = fb_f_op;
     fb_node->v_ops = fb_v_op;
-    fb_node->internal = 0;
+    fb_node->internal = kmalloc(sizeof(struct framebuffer_info));
 
     fb_node->file = 0;
     fb_node->parent = dev;
@@ -855,6 +894,8 @@ int sf_fb_create(vnode_t *dev) {
 
     fb_node->file = fb_file;
 
+    sf_mailbox_init_framebuffer(fb_node);
+
     return 0;
 }
 
@@ -866,13 +907,77 @@ int sf_fb_register() {
     fb_f_op->write = sf_fb_write;
 
     fb_v_op = (vnode_op_t *)kmalloc(sizeof(vnode_op_t));
-    fb_v_op->create = 0;
-    fb_v_op->lookup = 0;
-    fb_v_op->mkdir = 0;
+    fb_v_op->create = sf_fb_create;
+    fb_v_op->lookup = sf_fb_lookup;
+    fb_v_op->mkdir = sf_fb_mkdir;
 
     return 0;
 }
 
+void sf_mailbox_init_framebuffer(vnode_t *fb_node)
+{
+	unsigned int __attribute__((aligned(16))) mbox[36];
+
+	mbox[0] = 35 * 4;
+	mbox[1] = REQUEST_CODE;
+
+	mbox[2] = 0x48003; // set phy wh
+	mbox[3] = 8;
+	mbox[4] = 8;
+	mbox[5] = 1024; // FrameBufferInfo.width
+	mbox[6] = 768;  // FrameBufferInfo.height
+
+	mbox[7] = 0x48004; // set virt wh
+	mbox[8] = 8;
+	mbox[9] = 8;
+	mbox[10] = 1024; // FrameBufferInfo.virtual_width
+	mbox[11] = 768;  // FrameBufferInfo.virtual_height
+
+	mbox[12] = 0x48009; // set virt offset
+	mbox[13] = 8;
+	mbox[14] = 8;
+	mbox[15] = 0; // FrameBufferInfo.x_offset
+	mbox[16] = 0; // FrameBufferInfo.y.offset
+
+	mbox[17] = 0x48005; // set depth
+	mbox[18] = 4;
+	mbox[19] = 4;
+	mbox[20] = 32; // FrameBufferInfo.depth
+
+	mbox[21] = 0x48006; // set pixel order
+	mbox[22] = 4;
+	mbox[23] = 4;
+	mbox[24] = 1; // RGB, not BGR preferably
+
+	mbox[25] = 0x40001; // get framebuffer, gets alignment on request
+	mbox[26] = 8;
+	mbox[27] = 8;
+	mbox[28] = 4096; // FrameBufferInfo.pointer
+	mbox[29] = 0;    // FrameBufferInfo.size
+
+	mbox[30] = 0x40008; // get pitch
+	mbox[31] = 4;
+	mbox[32] = 4;
+	mbox[33] = 0; // FrameBufferInfo.pitch
+
+	mbox[34] = END_TAG;
+
+	// this might not return exactly what we asked for, could be
+	// the closest supported resolution instead
+	if (mailbox_call(MBOX_CH_PROP, mbox) && mbox[20] == 32 && mbox[28] != 0) {
+		mbox[28] &= 0x3FFFFFFF; // convert GPU address to ARM address
+        struct framebuffer_info *fb_info = (struct framebuffer_info *)fb_node->internal;
+		fb_info->width = mbox[5];        // get actual physical width
+		fb_info->height = mbox[6];       // get actual physical height
+		fb_info->pitch= mbox[33];       // get number of bytes per line
+		fb_info->isrgb = mbox[24];       // get the actual channel order
+		fb_info->lfb = (void *)((unsigned long)mbox[28]);
+	} else {
+		uart_puts("Unable to set screen resolution to 1024x768x32\n");
+	}
+}
+
+//---------- vnode operation ----------//
 int sf_fb_open(vnode_t* file_node, file_t** target) {
     if (file_node->type == SPECIAL_FILE)
     {
@@ -899,16 +1004,39 @@ int sf_fb_close(file_t* file) {
 
 int sf_fb_write(file_t* file, const void* buf, unsigned long len) {
     char *src = (char *)buf;
+    struct framebuffer_info *fb_info = (struct framebuffer_info *)file->vnode->internal;
+    char *des = (char *)fb_info->lfb;
     while (*src != '\0' && len > 0)
     {
-        uart_send(*src);
-        src++;
+        *des++ = *src++;
         len--;
     }
-    return src - (char *)buf;
+
+    int written = des - (char *)fb_info->lfb;
+    file->f_pos += written;
+    file->size += written;
+
+    // uart_put_int((unsigned long)written);
+    // uart_puts("\t");
+
+    return written;
 }
 
 // write only
 int sf_fb_read(file_t* file, void* buf, unsigned long len) {
     return -1;
 }
+//-------------------------------------//
+
+
+//---------- vnode operation ----------//
+int sf_fb_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
+    return -1;
+}
+int sf_fb_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
+    return -1;
+}
+int sf_fb_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
+    return -1;
+}
+//-------------------------------------//

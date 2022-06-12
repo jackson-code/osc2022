@@ -15,6 +15,7 @@
         "mmio.h": "c",
         "initramfs.h": "c",
         "mailbox.h": "c",
-        "cpio.h": "c"
+        "cpio.h": "c",
+        "sys_call.h": "c"
     }
 }

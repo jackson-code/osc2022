@@ -96,7 +96,12 @@ void lower_el_aarch64_sync_(unsigned long esr_el1, unsigned long elr_el1, struct
 }
 
 
-
+void waitting(unsigned long period) {
+	while (period--)
+	{
+		/* code */
+	}
+}
 
 
 //*********************************************************//
@@ -122,6 +127,7 @@ void curr_el_sp0_serror_()
 }
 void curr_el_spx_sync_()
 {
+	waitting(100000);
 	uart_puts("curr_el_spx_sync_ ");
 }
 void curr_el_spx_fiq_()

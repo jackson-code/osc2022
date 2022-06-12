@@ -11,6 +11,7 @@ extern scheduler sche_proc;
 
 void free_task(Task *tar);
 
+#define debug
 
 void sys_get_task_id(struct trapframe* trapframe) {
     Task *cur = sche_running_proc(&sche_proc);
@@ -170,9 +171,11 @@ void sys_open(struct trapframe* trapframe) {
     const char *pathname = (const char *)trapframe->x[0];
     int flags = (int)trapframe->x[1];
 
+    #ifdef debug
     uart_puts("--- sys_open ---\t");
     uart_puts(pathname);
     uart_puts("\n");
+    #endif
 
     Task *cur_task = sche_running_proc(&sche_proc);
     file_t *f = (file_t *)kmalloc(sizeof(file_t *));
@@ -202,9 +205,11 @@ void sys_close(struct trapframe* trapframe) {
     int fd = (int)trapframe->x[0];
     Task *cur_task = sche_running_proc(&sche_proc);
 
+    #ifdef debug
     uart_puts("--- sys_close ---\t");
     uart_puts(cur_task->fd_table[fd]->vnode->name);
     uart_puts("\n");
+    #endif
 
     int ret = vfs_close(cur_task->fd_table[fd]);
     cur_task->fd_table[fd] = 0;
@@ -222,9 +227,11 @@ void sys_write(struct trapframe* trapframe) {
     Task *cur_task = sche_running_proc(&sche_proc);
     file_t *f = cur_task->fd_table[fd];
 
+    #ifdef debug
     uart_puts("--- sys_write ---\t");
     uart_puts(cur_task->fd_table[fd]->vnode->name);
     uart_puts("\n");
+    #endif
 
     trapframe->x[0] = vfs_write(f, buf, len);
 }
@@ -239,9 +246,11 @@ void sys_read(struct trapframe* trapframe) {
     Task *cur_task = sche_running_proc(&sche_proc);
     file_t *f = cur_task->fd_table[fd];
 
+    #ifdef debug
     uart_puts("--- sys_read ---\t");
     uart_puts(cur_task->fd_table[fd]->vnode->name);
     uart_puts("\n");
+    #endif
 
     trapframe->x[0] = vfs_read(f, buf, len);
 }
@@ -250,10 +259,12 @@ void sys_read(struct trapframe* trapframe) {
 // you can ignore mode, since there is no access control
 void sys_mkdir(struct trapframe* trapframe) {
     const char *pathname = (const char *)trapframe->x[0];
-    
+
+    #ifdef debug
     uart_puts("--- sys_mkdir ---\t");
     uart_puts(pathname);
     uart_puts("\n");
+    #endif
 
     trapframe->x[0] =  vfs_mkdir(pathname);     // return success or not
 }
@@ -267,11 +278,13 @@ void sys_mount(struct trapframe* trapframe) {
     //unsigned long flags = 
     //const void *data = 
 
+    #ifdef debug
     uart_puts("--- sys_mount ---\ttarget: ");
     uart_puts(target);
     uart_puts(", filesystem: ");
     uart_puts(filesystem);
     uart_puts("\n");
+    #endif
 
     trapframe->x[0] =  vfs_mount(target, filesystem);     // return success or not
 }
@@ -279,12 +292,50 @@ void sys_mount(struct trapframe* trapframe) {
 // syscall number : 17
 void sys_chdir(struct trapframe* trapframe) {
     const char *pathname = (const char *)trapframe->x[0];
-
+    
+    #ifdef debug
     uart_puts("--- sys_chdir ---\ttarget: ");
     uart_puts(pathname);
     uart_puts("\n");
+    #endif
 
     trapframe->x[0] =  vfs_chdir(pathname);                  // return success or not
+}
+
+// syscall number : 18
+// you only need to implement seek set
+void sys_lseek64(struct trapframe* trapframe) {
+    int fd = (int)trapframe->x[0];
+    long offset = (long)trapframe->x[1];
+    int whence = (int)trapframe->x[2];
+
+    #ifdef debug
+    uart_puts("--- sys_lseek64 ---\tfd: ");
+    uart_put_int(fd);
+    uart_puts("\n");
+    #endif
+
+    Task *cur_task = sche_running_proc(&sche_proc);
+    file_t *f = cur_task->fd_table[fd];
+
+    trapframe->x[0] = vfs_lseek64(f, offset, whence);
+}
+
+// syscall number : 19
+void sys_ioctl(struct trapframe* trapframe)
+{
+    int fd = (int)trapframe->x[0];
+    unsigned long request = trapframe->x[1];
+    void *info = (void *)trapframe->x[2];
+    
+    Task *cur_task = sche_running_proc(&sche_proc);
+    file_t *f = cur_task->fd_table[fd];
+
+    #ifdef debug
+    uart_puts("--- sys_ioctl ---\n");
+    #endif
+
+    trapframe->x[0] = vfs_ioctl(f, request, info);
 }
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
@@ -370,6 +421,16 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_CHDIR:
             enable_interrupt();
             sys_chdir(trapframe);
+            break;
+
+        case SYS_LSEEK64:
+            enable_interrupt();
+            sys_lseek64(trapframe);
+            break;
+
+        case SYS_IOCTL:
+            enable_interrupt();
+            sys_ioctl(trapframe);
             break;
     }
 }

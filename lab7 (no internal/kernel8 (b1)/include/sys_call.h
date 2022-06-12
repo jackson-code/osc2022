@@ -26,6 +26,8 @@
 #define SYS_MOUNT           16
 #define SYS_CHDIR           17
 
+#define SYS_LSEEK64         18
+#define SYS_IOCTL           19
 
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe);
 
