@@ -1,0 +1,9 @@
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -initrd initramfs.cpio -S -s -serial null -serial stdio
+
+sudo screen /dev/ttyUSB0 115200
+
+sudo chmod a+rw /dev/ttyUSB0
+
+python3 host2pi.py
+
+
