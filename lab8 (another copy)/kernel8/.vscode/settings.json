@@ -1,0 +1,23 @@
+{
+    "files.associations": {
+        "mm.h": "c",
+        "list.h": "c",
+        "scheduler.h": "c",
+        "trapframe.h": "c",
+        "my_string.h": "c",
+        "timer.h": "c",
+        "uart.h": "c",
+        "gpio.h": "c",
+        "convert.h": "c",
+        "address.h": "c",
+        "allocator.h": "c",
+        "property.h": "c",
+        "mmio.h": "c",
+        "initramfs.h": "c",
+        "mailbox.h": "c",
+        "cpio.h": "c",
+        "sys_call.h": "c",
+        "command.h": "c",
+        "sd.h": "c"
+    }
+}
