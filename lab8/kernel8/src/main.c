@@ -40,7 +40,7 @@ void main()
 	// lab8
 	sd_init();
 	fat32_init();
-	// sd_mount_fat32();
+	el1_exec_lab7_test("/initramfs/vfs2.img");
 
 
 	int MAXCMD = 20;

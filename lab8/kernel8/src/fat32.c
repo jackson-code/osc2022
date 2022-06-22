@@ -32,14 +32,15 @@ int fat32_init() {
     register_filesystem("fat32");
 
     int ret;
-    ret = vfs_mkdir("/boot");               // /boot is TA's spec
+    ret = vfs_mkdir("/boot");               // "/boot" is TA's spec
     ret = vfs_mount("/boot", "fat32");
     return ret;
 }
 
 int fat32_setup_mount(filesystem_t *tmpfs, struct mount *_mount) {
     // mount->fs = fat32;
-    // mount->root = tmpfs_create_vnode("/", 0, DIRECTORY);
+    _mount->root->f_ops = fat32_f_op;
+    _mount->root->v_ops = fat32_v_op;
 
     int parti_blk_idx = 2048;       // from TA's spec
 
@@ -81,35 +82,9 @@ int fat32_setup_mount(filesystem_t *tmpfs, struct mount *_mount) {
     // struct fat32_inter =  boot_dir->vnode->internal;
 
 
-
-    sd_read_block(fat32_meta.sec_beg.data_region, buf);
-
-    // dir table traversal 
-    int offset = sizeof(struct fat32_dir_entry);
-    struct fat32_dir_entry *dir_entry = (struct fat32_dir_entry *)buf;
-    while (dir_entry->name[0] != FAT_DIR_TABLE_END)
-    {
-        //ret = vfs_open((const char *)dir_entry->name, "fat32");
-        offset += offset;
-        dir_entry = (struct fat32_dir_entry *)(buf + offset);
-    }
-
-
-    return 0;
-}
-
-
-//---------- vnode operation ----------//
-
-/*
-    return the first cluster number of the file if success, otherwise return -1.
-*/
-int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    char buf[BLOCK_SIZE];
-
+    // // dir table traversal (same code on fat32_lookup)
+    // // if add new file into img, uncomment for checking new file existing or not
     // sd_read_block(fat32_meta.sec_beg.data_region, buf);
-
-    // // dir table traversal 
     // int offset = sizeof(struct fat32_dir_entry);
     // struct fat32_dir_entry *dir_entry = (struct fat32_dir_entry *)buf;
     // while (dir_entry->name[0] != FAT_DIR_TABLE_END)
@@ -118,11 +93,35 @@ int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name)
     //     offset += offset;
     //     dir_entry = (struct fat32_dir_entry *)(buf + offset);
     // }
+    return 0;
+}
 
 
+//---------- vnode operation ----------//
+void get_dir_entry_file_name(char *file_name, struct fat32_dir_entry *dir_entry)
+{
+    int i = 0, len = 0;
+    while (dir_entry->name[i] != ' ' && i < 8)
+    {
+        *file_name++ = dir_entry->name[i++];
+    }
+    *file_name++ = '.';
+    i = 0;
+    while (dir_entry->ext[i] != ' ' && i < 3)
+    {
+        *file_name++ = dir_entry->ext[i++];
+    }
+    *file_name = '\0';
+}
+
+/*
+    return the first cluster number of the file if success, otherwise return -1.
+*/
+int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
     // 1. Get the cluster number of the directory table and calculate its block index.
     // 2. Read the first block of the cluster.
-    // 1. & 2. have done in sd_mount_fat32()
+    // 1. & 2. have done in fat32_setup_mount()
+    char buf[BLOCK_SIZE];
     sd_read_block(fat32_meta.sec_beg.root_dir_entry, buf);
     struct fat32_dir_entry *dir_entry = (struct fat32_dir_entry *)buf;
 
@@ -130,10 +129,14 @@ int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name)
     int offset = sizeof(struct fat32_dir_entry);
     while (dir_entry->name[0] != FAT_DIR_TABLE_END)
     {
-        if (!str_cmp((dir_entry->name), component_name))      // find the file's dir entry
+        // combine name and ext
+        char *file_name;
+        get_dir_entry_file_name(file_name, dir_entry);
+
+        if (!str_cmp(file_name, component_name))      // find the file's dir entry
         {
             // You can get the first cluster number of the file in the directory table entry.
-            return (dir_entry->clus_num_high << 16) | (dir_entry->clus_num_low >> 16);
+            return (dir_entry->clus_num_high << 16) | (dir_entry->clus_num_low);
         }
         // next entry
         offset += offset;
@@ -141,6 +144,8 @@ int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name)
     }
     return -1;
 }
+
+
 
 int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
     // if (!str_cmp("\0", (*file_node)->name))    // the file's vnode not existing

@@ -81,19 +81,6 @@ int vfs_traversal(const char* target, vnode_t *dir_node, vnode_t **v_tar) {
 int vfs_mount(const char* target, const char* filesystem) {
 	uart_puts("vfs_mount begin\n");
 
-    // find filesystem
-    filesystem_t fs;
-    if (!str_cmp("tmpfs", filesystem)) {
-        fs = tmpfs;
-    } else if (!str_cmp("initramfs", filesystem)) {
-        fs = initramfs;
-    } else if (!str_cmp("fat32", filesystem)) {
-        fs = fat32;
-    } else {
-        uart_puts("ERROR in vfs_mount(): unsupport filesystem\n");
-        return -1;
-    }
-
     // find target vnode
     int ret;
     vnode_t *v_tar; 
@@ -110,13 +97,26 @@ int vfs_mount(const char* target, const char* filesystem) {
             uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
     }  
 
+    // find filesystem
+    filesystem_t *fs;
+    if (!str_cmp("tmpfs", filesystem)) {
+        fs = &tmpfs;
+    } else if (!str_cmp("initramfs", filesystem)) {
+        fs = &initramfs;
+    } else if (!str_cmp("fat32", filesystem)) {
+        fs = &fat32;
+    } else {
+        uart_puts("ERROR in vfs_mount(): unsupport filesystem\n");
+        return -1;
+    }
+
     struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount));
-    mount_fs->fs = &fs;
+    mount_fs->fs = fs;
     mount_fs->root = v_tar;
     v_tar->mount = mount_fs;    
 
     // mount up fs
-    fs.setup_mount(&fs, mount_fs);
+    fs->setup_mount(fs, mount_fs);
 
 	uart_puts("vfs_mount finish\n");
     return ret;
@@ -204,8 +204,8 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     {
         return node->f_ops->open(node, file_tar);
     } 
-    // fat32 always be handle here
-    else if (ret > 0)
+    // fat32 always be handle here(same as above)
+    else if (!str_cmp(node->mount->fs->name, "fat32"))
     {
         return node->f_ops->open(node, file_tar);
     }
