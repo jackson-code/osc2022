@@ -178,7 +178,7 @@ void sys_open(struct trapframe* trapframe) {
     #endif
 
     Task *cur_task = sche_running_proc(&sche_proc);
-    file_t *f = (file_t *)kmalloc(sizeof(file_t *));
+    file_t *f = (file_t *)kmalloc(sizeof(file_t));
 
     if (vfs_open(pathname, flags, &f) != 0) 
     {

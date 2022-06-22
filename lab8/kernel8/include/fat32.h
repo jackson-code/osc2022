@@ -54,7 +54,7 @@ struct fat32_boot_sector {
     uint32_t sectors_per_FAT;                    // 0x24-0x27
     uint16_t drive_description;                 // 0x28-0x29 (mirror_flag)
     uint16_t version;                           // 0x2A-0x2B
-    uint32_t clus_num_of_root_dir_beg;          // 0x2C-0x2F, cluster num of root directory table
+    uint32_t clus_num_of_root_dir;              // 0x2C-0x2F, cluster num of root directory table
     uint16_t fs_info_sector_num;                // 0x30-0x31
     uint16_t boot_sector_bak_first_sector_num;  // 0x32-0x33
     uint32_t reserved[3];                       // 0x34-0x3F
@@ -70,8 +70,10 @@ struct fat32_boot_sector {
 // #define dir_entry_first_byte(fat32_dir_entry) (fat32_dir_entry & 0xFF)
 #define FAT_DIR_TABLE_END                       (0x00)
 
+#define FAT_DIR_ENTRY_ATTR                      (0x20)
+
 struct fat32_dir_entry {
-    uint8_t name[8];                // 0x0-0x7
+    uint8_t short_name[8];                // 0x0-0x7
     uint8_t ext[3];                 // 0x8-0xA
     uint8_t attr;                   // 0xB
     uint8_t reserved;               // 0xC
@@ -106,6 +108,9 @@ struct fat32_sector_beg {
 struct fat32_meta {
     struct fat32_layout_size sec_size;
     struct fat32_sector_beg sec_beg;
+    uint32_t first_clus;
+    uint32_t eoccm;                         // end of cluster chain marker
+
     // uint32_t fat_region_blk_idx;
     // uint32_t n_fat;
     // uint32_t sector_per_fat;
@@ -114,18 +119,18 @@ struct fat32_meta {
     // uint8_t sector_per_cluster;
 };
 
-struct fat32_internal {
+typedef struct fat32_internal {
     uint32_t first_cluster;
     uint32_t dirent_cluster;
     uint32_t size;
-};
+}inter_fat32_t;
 
 extern struct fat32_meta fat32_meta;
 
 int fat32_init();
 int fat32_register();
 int fat32_setup_mount(filesystem_t *tmpfs, struct mount *mount);
-vnode_t *fat32_create_vnode(const char *name, vnode_t *parent, enum vnode_type type);
+vnode_t *fat32_create_vnode(const char *name, vnode_t *parent, enum vnode_type type, uint32_t first_clus);
 //---------- file operation ----------//
 int fat32_write(file_t* file, const void* buf, unsigned long len);
 int fat32_read(file_t* file, void* buf, unsigned long len);

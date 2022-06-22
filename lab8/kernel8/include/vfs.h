@@ -113,7 +113,6 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 
 typedef struct internal_tmpfs {
    char *file_content;
-    // char buf[TMPFS_MAX_FILE_SIZE];
 }inter_tmpfs_t;
 
 

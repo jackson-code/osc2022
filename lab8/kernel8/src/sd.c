@@ -178,72 +178,7 @@ void sd_init() {
     sdcard_setup();
 }
 
-/*
-    uint32_t FAT_blk_count = fat32_meta.sec_size.FAT_region;
-    uint32_t FAT_entry_count =  BLOCK_SIZE / sizeof(uint32_t);
-    uint32_t FAT_total_entry_count = FAT_blk_count * FAT_entry_count;
-    uint32_t *FAT = (uint32_t *)kmalloc(fat32_meta.sec_size.FAT_region * bs->bytes_per_logical_sector);
-    // uint32_t FAT[fat32_meta.sec_size.FAT_region * bs->bytes_per_logical_sector / sizeof(uint32_t)];
-    // uint32_t FAT[FAT_toal_entry_count];
 
-    // load the whole FAT into local variable FAT
-    uint32_t blk_idx = 0;
-    while (blk_idx < FAT_blk_count)
-    {
-        sd_read_block(fat32_meta.sec_beg.FAT_region + blk_idx, FAT + blk_idx * BLOCK_SIZE / sizeof(uint32_t));
-        blk_idx++;
-        uart_put_int(blk_idx);
-    }
-    uart_puts("\nOK~~~\n");
-    blk_idx = 0;
-
-    // int32_t seen[FAT_total_entry_count];
-    int32_t *seen = (int32_t *)kmalloc(FAT_total_entry_count);
-    // uint32_t clus_sets[FAT_total_entry_count];
-    uint32_t *clus_sets = (uint32_t *)kmalloc(FAT_total_entry_count);
-    uint32_t clus_idx = 0;
-
-    // special entries (the first two entries in whole FAT region)
-    uint32_t EOCCM = *(FAT + 1); // end of cluster chain marker
-    
-    // // skip special entry
-    // uint32_t entry_idx = 2;                                 
-    uint32_t seen_idx = 2;                                 
-    seen[0] = seen[1] = -1;                                 // -1 means the extry have seen
- 
-    uint32_t cur_entry = 2;                                 // skip special entry
-    uint32_t next_entry;
-    uint32_t count = 0;
-    // while (seen_idx < FAT_total_entry_count)
-    while (count < FAT_total_entry_count)
-    {
-        count++;
-        // uart_put_int(seen_idx);
-        // uart_puts(" ");
-        //ret = vfs_open((const char *)dir_entry->name, "fat32");
-
-        if (cur_entry == EOCCM || cur_entry == EOC)
-        {
-            clus_sets[clus_idx++] = 0;    // use 0 as delimiter between file's clusters
-            
-            // find unseen clus num
-            while (seen[seen_idx] == -1 || *(FAT + seen_idx) == 0)
-            {
-                seen_idx++;
-            }
-            next_entry = seen_idx;         
-        }
-        else if (cur_entry != 0)
-        {
-            seen[cur_entry] = -1;
-            next_entry = *(FAT + cur_entry);
-            
-            clus_sets[clus_idx++] = cur_entry;
-            // clusters_size++;
-        }
-        cur_entry = next_entry;
-    }
-*/
 
 
 

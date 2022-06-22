@@ -185,8 +185,8 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     str_token(pathname, comp_names, '/');
     char *file_name = comp_names[comp_count - 1];
 
-    vnode_t *node;          // will be directory/file vnode
     // 1. Lookup pathname
+    vnode_t *node;          // will be directory/file vnode
     int ret = vfs_lookup(pathname, &node);
 
     // special file
@@ -196,19 +196,11 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
         return 0;
     }      
 
-    // ret > 0 means fat32's file
-    // not sure should handle fat32 in if or else below
-
     // 2. Create a new file handle for this vnode if found.
     if (ret == 0 && node->type == REGULAR_FILE)
     {
         return node->f_ops->open(node, file_tar);
     } 
-    // fat32 always be handle here(same as above)
-    else if (!str_cmp(node->mount->fs->name, "fat32"))
-    {
-        return node->f_ops->open(node, file_tar);
-    }
     else
     // 3. Create a new file(and vnode) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
@@ -464,7 +456,6 @@ int tmpfs_create_file(vnode_t* file_node, file_t** target) {
     else
     {
         *target = file_node->file;
-        //(*target)->status = FILE_EXIST;
         uart_puts("\tWARNING tmpfs_create_file(): file existing\n");
         return 0;
     }
@@ -844,23 +835,23 @@ int sf_uart_register() {
 }
 
 int sf_uart_open(vnode_t* file_node, file_t** target) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_close(file_t* file) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_write(file_t* file, const void* buf, unsigned long len) {
