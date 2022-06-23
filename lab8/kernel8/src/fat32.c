@@ -51,27 +51,10 @@ int fat32_init() {
     vfs_mkdir("/boot");               // "/boot" is TA's spec
     vfs_mount("/boot", "fat32");
 
-    vnode_t *boot;
-    vfs_lookup("/boot", &boot);
-
-    // traverse dir table, create vnode for every dir entry
-    struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
-    sd_read_block(fat32_meta.sec_beg.data_region, dir_table);
-    struct fat32_dir_entry *dir_entry = dir_table;
-    while (dir_entry->short_name[0] != FAT_DIR_TABLE_END)
-    {
-        // combine name and ext
-        char *file_name = (char *)kmalloc(sizeof(char) * (8+1+3+1));
-        get_complete_file_name(file_name, dir_entry);
-
-        fat32_create_vnode(file_name, boot, REGULAR_FILE, (dir_entry->clus_num_high << 16) | (dir_entry->clus_num_low));
-        dir_entry++;
-    }
     return 0;
 }
 
 int fat32_setup_mount(filesystem_t *tmpfs, struct mount *_mount) {
-    // mount->fs = fat32;
     _mount->root->f_ops = fat32_f_op;
     _mount->root->v_ops = fat32_v_op;
 
@@ -111,6 +94,8 @@ int fat32_setup_mount(filesystem_t *tmpfs, struct mount *_mount) {
     sd_read_block(fat32_meta.sec_beg.FAT_region, FAT);
     fat32_meta.eoccm = *(FAT + 1);    // end of cluster chain marker
 
+    fat32_meta.root = _mount->root;
+
     return 0;
 }
 
@@ -130,6 +115,25 @@ int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name)
             return 0;
         }
     }
+ 
+    // finding in dir table, create vnode for the dir entry
+    struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
+    sd_read_block(fat32_meta.sec_beg.data_region, dir_table);
+    struct fat32_dir_entry *dir_entry = dir_table;
+    while (dir_entry->short_name[0] != FAT_DIR_TABLE_END)
+    {
+        // combine name and ext
+        char *file_name = (char *)kmalloc(sizeof(char) * (8+1+3+1));
+        get_complete_file_name(file_name, dir_entry);
+
+        if (!str_cmp(file_name, component_name))
+        {
+            *v_tar = fat32_create_vnode(file_name, fat32_meta.root, REGULAR_FILE, (dir_entry->clus_num_high << 16) | (dir_entry->clus_num_low));
+            return 0;
+        }
+        dir_entry++;
+    }
+    
     return -1;
 }
 
@@ -247,6 +251,7 @@ int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
         }
         str_token(file_name, comp_names, '.');
 
+        // fill file name with space
         int i = str_len(comp_names[0]);
         while (i < 8)
         {
@@ -259,14 +264,8 @@ int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
         str_cpy((char *)dir_entry->short_name, comp_names[0]);
         str_cpy((char *)dir_entry->ext, comp_names[1]);
         dir_entry->attr = FAT_DIR_ENTRY_ATTR;
-        // dir_entry->reserved;               // 0xC
-        // dir_entry->create_time[3];         // 0xD-0xF
-        // dir_entry->create_date;           // 0x10-0x11
-        // dir_entry->last_access_date;      // 0x12-0x13
-        dir_entry->clus_num_high = first_clus >> 16;         // 0x14-0x15
-        // dir_entry->ext_attr;              // 0x16-0x19
+        dir_entry->clus_num_high = first_clus >> 16;                 // 0x14-0x15
         dir_entry->clus_num_low = (first_clus << 16) >> 16;          // 0x1A-0x1B
-        // dir_entry->file_size = 20;             // 0x1C-0x1F, size in bytes
         sd_write_block(fat32_meta.sec_beg.data_region, dir_table);
 
         // create file's vnode below dir_node 
@@ -284,7 +283,7 @@ int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
     }
 }
 int fat32_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-
+    return -1;
 }
 
 int update_dir_entry_size(uint32_t size, const char *name) {
@@ -297,6 +296,7 @@ int update_dir_entry_size(uint32_t size, const char *name) {
     char *file_name = (char *)kmalloc(sizeof(char) * (8+1+3+1));
     get_complete_file_name(file_name, dir_entry);
 
+    // finding target
     while (dir_entry->short_name[0] != FAT_DIR_TABLE_END && str_cmp(file_name, name) != 0)
     {
         dir_entry++;

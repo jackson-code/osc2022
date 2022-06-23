@@ -110,7 +110,7 @@ struct fat32_meta {
     struct fat32_sector_beg sec_beg;
     uint32_t first_clus;
     uint32_t eoccm;                         // end of cluster chain marker
-
+    vnode_t *root;
     // uint32_t fat_region_blk_idx;
     // uint32_t n_fat;
     // uint32_t sector_per_fat;
