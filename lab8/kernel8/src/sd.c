@@ -177,22 +177,3 @@ void sd_init() {
     sdhost_setup();
     sdcard_setup();
 }
-
-
-
-
-
-//-------------------------------------------------//
-//               classic generic MBR               //
-//-------------------------------------------------//
-
-/* 
-    The MBR is not located in a partition; 
-    it is located at a first sector of the device (physical offset 0), 
-    preceding the first partition
-*/
-void read_classical_generic_MBR(char *mbr)
-{
-    sd_read_block(0, mbr);
-}
-

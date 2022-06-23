@@ -105,7 +105,7 @@ int fat32_setup_mount(filesystem_t *tmpfs, struct mount *_mount) {
     return the first cluster number of the file if success, otherwise return -1.
 */
 int fat32_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    // finding vnode in dir_node's child
+    // finding vnode in dir_node's child (componen name cache mechanism)
     for (list_head *sibling = dir_node->subdirs.next; sibling != &dir_node->subdirs; sibling = sibling->next)
     {
         vnode_t *child = list_entry(sibling, struct vnode, siblings);
@@ -151,6 +151,7 @@ vnode_t *fat32_create_vnode(const char *name, vnode_t *parent, enum vnode_type t
     v->v_ops = fat32_v_op;
     inter_fat32_t *inter = (inter_fat32_t *)kmalloc(sizeof(inter_fat32_t));
     inter->first_cluster = first_clus;
+    inter->file_cache->status = EMPTY;
     v->internal = inter;
 
     v->file = 0;
@@ -209,13 +210,15 @@ int fat32_create_file(vnode_t* file_node, file_t** target) {
     }
 }
 
+// TODO
 int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
     if (!str_cmp("\0", (*file_node)->name))    // the file's vnode not existing
     {
-        // Find an empty entry in the FAT table.
+        // 1. Find an empty entry in the FAT table.
         uint32_t table_idx = 0;
         uint32_t table_size = BLOCK_SIZE / sizeof(uint32_t);
-        uint32_t FAT[table_size];
+        uint32_t *FAT = (uint32_t *)kmalloc(table_size * sizeof(uint32_t));
+        // uint32_t FAT[table_size];
         uint32_t first_clus = 2;                 // skip special file
         while (first_clus != 0)
         {
@@ -233,8 +236,9 @@ int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
         sd_write_block(fat32_meta.sec_beg.FAT_region + table_idx, FAT);
         first_clus += table_size * table_idx;
 
-        // Find an empty directory entry in the target directory.
-        struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
+        // 2. Find an empty directory entry in the target directory.
+        struct fat32_dir_entry *dir_table = (struct fat32_dir_entry *)kmalloc(BLOCK_SIZE);
+        // struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
         sd_read_block(fat32_meta.sec_beg.data_region, dir_table);
         struct fat32_dir_entry *dir_entry = dir_table;
         while (dir_entry->short_name[0] != FAT_DIR_TABLE_END)
@@ -270,9 +274,13 @@ int fat32_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) 
 
         // create file's vnode below dir_node 
         *file_node = fat32_create_vnode(file_name, dir_node, REGULAR_FILE, first_clus);
-
-        file_t *file = (file_t *)kmalloc(sizeof(file_t));
+        file_t *file;
         fat32_create_file(*file_node, &file); 
+
+        // cache 
+        inter_fat32_t *inter = (inter_fat32_t*)((*file_node)->internal);
+        inter->FAT = FAT;
+        inter->dir_table = dir_table;
 
         return 0;
     }
@@ -286,10 +294,12 @@ int fat32_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name)
     return -1;
 }
 
-int update_dir_entry_size(uint32_t size, const char *name) {
-    // traverse dir table, create vnode for every dir entry
-    struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
-    sd_read_block(fat32_meta.sec_beg.data_region, dir_table);
+// TODO
+int update_dir_entry_size(uint32_t size, const char *name, vnode_t *v) {
+    // traverse dir table
+    // struct fat32_dir_entry dir_table[BLOCK_SIZE / sizeof(struct fat32_dir_entry)];
+    // sd_read_block(fat32_meta.sec_beg.data_region, dir_table);
+    struct fat32_dir_entry *dir_table = ((inter_fat32_t *)(v->internal))->dir_table;
     struct fat32_dir_entry *dir_entry = dir_table;
 
     // combine name and ext
@@ -315,12 +325,22 @@ int update_dir_entry_size(uint32_t size, const char *name) {
 
 
 //---------- file operation ----------//
+// TODO
 int fat32_write(file_t* file, const void* buf, unsigned long len) {
     inter_fat32_t *inter = (inter_fat32_t *)file->vnode->internal;
     
     char *src = (char *)buf;
-    char des[BLOCK_SIZE];
-    sd_read_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, des);
+    char *des;
+    // sd_read_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, des);
+
+    if (inter->file_cache->status == EMPTY)
+    {
+        des = (char *)kmalloc(BLOCK_SIZE);
+        inter->file_cache->content = des;
+        sd_read_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, des);
+    } else {
+        des = inter->file_cache->content;
+    }
 
     unsigned i = file->f_pos;
     while (len > 0 && *src != '\0')
@@ -332,6 +352,8 @@ int fat32_write(file_t* file, const void* buf, unsigned long len) {
 
     sd_write_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, des);
 
+    inter->file_cache->status = DIRTY;
+
     // uart_puts((char *)buf);
     // uart_puts("\n");
     // uart_puts((char *)des);
@@ -341,16 +363,26 @@ int fat32_write(file_t* file, const void* buf, unsigned long len) {
     file->f_pos += write_size;
     file->size += write_size;
 
-    update_dir_entry_size(file->size, file->vnode->name);
+    update_dir_entry_size(file->size, file->vnode->name, file->vnode);
 
     return write_size;
 }
+// TODO (OK)
 int fat32_read(file_t* file, void* buf, unsigned long len) {
     inter_fat32_t *inter = (inter_fat32_t *)file->vnode->internal;
     
     char *des = (char *)buf;
-    char src[BLOCK_SIZE];
-    sd_read_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, src);
+    char *src;
+
+    if (inter->file_cache->status == EMPTY)
+    {
+        src = (char *)kmalloc(BLOCK_SIZE);
+        inter->file_cache->content = src;
+        inter->file_cache->status = CLEAR;
+        sd_read_block(fat32_meta.sec_beg.data_region + inter->first_cluster - fat32_meta.first_clus, src);
+    } else {
+        src = inter->file_cache->content;
+    }
 
     unsigned i = file->f_pos;
     while (len > 0 && src[i] != '\0')
@@ -367,6 +399,7 @@ int fat32_read(file_t* file, void* buf, unsigned long len) {
 
     return read_size;
 }
+
 int fat32_open(vnode_t* vnode, file_t** target) {
     if (vnode->type == REGULAR_FILE)
     {

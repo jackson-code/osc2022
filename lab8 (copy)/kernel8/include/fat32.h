@@ -67,7 +67,6 @@ struct fat32_boot_sector {
 } __attribute__((packed));
 
 //----- directory table -----//
-// #define dir_entry_first_byte(fat32_dir_entry) (fat32_dir_entry & 0xFF)
 #define FAT_DIR_TABLE_END                       (0x00)
 
 #define FAT_DIR_ENTRY_ATTR                      (0x20)
@@ -121,11 +120,27 @@ struct fat32_meta {
 
 typedef struct fat32_internal {
     uint32_t first_cluster;
-    uint32_t dirent_cluster;
-    uint32_t size;
+    // uint32_t dirent_cluster;
+    // uint32_t size;
+
+    // cache for meta data
+    uint32_t *FAT;
+    struct fat32_dir_entry *dir_table;
+    // cache for file content
+    // char *file_content;
+    struct file_cache *file_cache; 
 }inter_fat32_t;
 
-extern struct fat32_meta fat32_meta;
+enum file_cache_status {
+    DIRTY = 1,
+    CLEAR = 2,
+    EMPTY = 3,
+};
+
+struct file_cache {
+    char *content;
+    enum file_cache_status status;
+};
 
 int fat32_init();
 int fat32_register();
@@ -140,5 +155,16 @@ int fat32_close(file_t* file);
 int fat32_lookup(vnode_t* dir_node, vnode_t** target, const char* component_name);
 int fat32_create(vnode_t* dir_node, vnode_t** target, const char* component_name);
 int fat32_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
+
+
+
+// memory cached SD card
+struct file_meta {
+
+    // struct list_head next;
+};
+
+
+
 
 #endif

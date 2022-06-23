@@ -9,6 +9,7 @@
 #include "cpio.h"
 #include "mailbox.h"
 #include "fat32.h"
+#include "sd.h"
 
 filesystem_t tmpfs;
 file_op_t *tmpfs_f_op;
@@ -170,6 +171,32 @@ int vfs_mknod(const char *pathname, enum dev_type dev_type){
     {
         uart_puts("ERROR in vfs_mknod():\t unsupporting device\n");
         return -1;
+    }
+}
+
+void vfs_sync() {
+    vnode_t *boot;
+    vfs_lookup("/boot", &boot);
+
+    // finding vnode in boot's child
+    for (list_head *sibling = boot->subdirs.next; sibling != &boot->subdirs; sibling = sibling->next)
+    {
+        vnode_t *child = list_entry(sibling, struct vnode, siblings);
+        inter_fat32_t *inter = (inter_fat32_t *)(child->internal);
+        if (inter->status == DIRTY)
+        {
+            sd_write_block(inter->dir_table_blk_idx, inter->dir_table);
+            sd_write_block(inter->FAT_blk_idx, inter->FAT);
+            inter->status = EMPTY;
+            kfree(inter->dir_table);
+            kfree(inter->FAT);
+        }
+        if (inter->file_cache->status == DIRTY)
+        {
+            sd_write_block(inter->file_cache->blk_idx, inter->file_cache->content);
+            inter->file_cache->status = EMPTY;
+            kfree(inter->file_cache->content);
+        }
     }
 }
 

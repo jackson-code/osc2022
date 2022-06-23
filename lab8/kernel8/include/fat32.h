@@ -24,7 +24,7 @@ struct mbr_partition_entry {
     uint8_t partition_end_head;         // 0x5
     uint8_t partition_end_sector;       // 0x6
     uint8_t partition_end_cylinder;     // 0x7
-    uint8_t sector_beg;            // 0x8-0xB
+    uint8_t sector_beg;                 // 0x8-0xB
     uint8_t number_of_sector;           // 0xC-0xF
 };
 
@@ -67,7 +67,6 @@ struct fat32_boot_sector {
 } __attribute__((packed));
 
 //----- directory table -----//
-// #define dir_entry_first_byte(fat32_dir_entry) (fat32_dir_entry & 0xFF)
 #define FAT_DIR_TABLE_END                       (0x00)
 
 #define FAT_DIR_ENTRY_ATTR                      (0x20)
@@ -93,8 +92,6 @@ struct fat32_dir_entry {
 struct fat32_layout_size {
     uint32_t reserved_sectors;
     uint32_t FAT_region;
-    // uint32_t data_region;
-    uint32_t clus_size_byte;
 };
 
 // unit in sectors
@@ -111,21 +108,36 @@ struct fat32_meta {
     uint32_t first_clus;
     uint32_t eoccm;                         // end of cluster chain marker
     vnode_t *root;
-    // uint32_t fat_region_blk_idx;
-    // uint32_t n_fat;
-    // uint32_t sector_per_fat;
-    // uint32_t data_region_blk_idx;
-    // uint32_t first_cluster;
-    // uint8_t sector_per_cluster;
+};
+
+enum cache_status {
+    DIRTY = 1,
+    CLEAR = 2,
+    EMPTY = 3,
 };
 
 typedef struct fat32_internal {
     uint32_t first_cluster;
-    uint32_t dirent_cluster;
-    uint32_t size;
+    // uint32_t dirent_cluster;
+    // uint32_t size;
+
+    // cache for meta data
+    uint32_t *FAT;
+    uint32_t FAT_blk_idx;
+    struct fat32_dir_entry *dir_table;
+    uint32_t dir_table_blk_idx;
+    enum cache_status status;
+    // cache for file content
+    // char *file_content;
+    struct file_cache *file_cache; 
 }inter_fat32_t;
 
-extern struct fat32_meta fat32_meta;
+struct file_cache {
+    char *content;
+    enum cache_status status;
+    uint32_t blk_idx;
+    // uint32_t size;
+};
 
 int fat32_init();
 int fat32_register();
@@ -140,5 +152,16 @@ int fat32_close(file_t* file);
 int fat32_lookup(vnode_t* dir_node, vnode_t** target, const char* component_name);
 int fat32_create(vnode_t* dir_node, vnode_t** target, const char* component_name);
 int fat32_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name);
+
+
+
+// memory cached SD card
+struct file_meta {
+
+    // struct list_head next;
+};
+
+
+
 
 #endif

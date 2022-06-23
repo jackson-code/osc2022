@@ -338,6 +338,16 @@ void sys_ioctl(struct trapframe* trapframe)
     trapframe->x[0] = vfs_ioctl(f, request, info);
 }
 
+// syscall number : 20
+void sys_sync(struct trapframe* trapframe)
+{
+    #ifdef debug
+    uart_puts("--- sys_sync ---\n");
+    #endif
+
+    vfs_sync();
+}
+
 void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
     //enable_interrupt();
     switch (sys_call_num) {
@@ -431,6 +441,11 @@ void sys_call_router(unsigned long sys_call_num, struct trapframe* trapframe) {
         case SYS_IOCTL:
             enable_interrupt();
             sys_ioctl(trapframe);
+            break;
+
+        case SYS_SYNC:
+            enable_interrupt();
+            sys_sync(trapframe);
             break;
     }
 }

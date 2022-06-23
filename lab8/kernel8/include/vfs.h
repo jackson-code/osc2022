@@ -93,6 +93,7 @@ int vfs_chdir(const char *pathname);
 int vfs_mknod(const char *pathname, enum dev_type dev);
 long vfs_lseek64(struct file* file, long offset, int whence);
 int vfs_ioctl(struct file* framebuffer, unsigned long request, void *info);
+void vfs_sync();
 //---------- file operation ----------//
 int vfs_open(const char* pathname, int flags, struct file** target);
 int vfs_close(struct file* file);
