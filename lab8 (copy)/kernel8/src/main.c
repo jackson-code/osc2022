@@ -6,6 +6,7 @@
 #include "mm.h"
 #include "vfs.h"
 #include "sd.h"
+#include "fat32.h"
 
 /*
 unsigned long __stack_chk_guard;
@@ -31,14 +32,15 @@ void main()
   	cpio_init();
 
 	rootfs_init();
-	sf_init();
+	special_file_init();
 	initramfs_init();
 
 	//el1_exec_lab7_test("/initramfs/vfs2.img");
 
 	// lab8
-	// sd_init();
-	// sd_mount_fat32();
+	sd_init();
+	fat32_init();
+	el1_exec_lab7_test("/initramfs/vfs2.img");
 
 
 	int MAXCMD = 20;

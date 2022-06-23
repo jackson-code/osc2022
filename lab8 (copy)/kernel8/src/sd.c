@@ -1,9 +1,4 @@
 #include "sd.h"
-#include "uart.h"
-#include "utils.h"
-#include "vfs.h"
-#include "mm.h"
-#include "fat32.h"
 
 // helper
 #define set(io_addr, val) \
@@ -183,118 +178,7 @@ void sd_init() {
     sdcard_setup();
 }
 
-extern struct fat32_meta fat32_meta;
 
-int sd_mount_fat32() {
-    int parti_blk_idx = 2048;       // from TA's spec
-
-    // 0. Get Partition
-    char mbr[MBR_SIZE];
-    read_classical_generic_MBR(mbr);
-    // parse first partition only (have checked other partition are zero)
-    struct mbr_partition_entry p1;
-    memcpy(mbr + BOOTSTRAP_CODE_SIZE, &p1, sizeof(struct mbr_partition_entry));
-
-    // 1.Parse the metadata on the SD card.
-    // 2.Create a kernel object to store the metadata in memory.
-    char buf[BLOCK_SIZE];
-    // sd_read_block(p1.sector_beg, buf); // the boot sector is the first sector of a partition
-    sd_read_block(parti_blk_idx, buf);             
-    struct fat32_boot_sector *bs;
-    memcpy(buf, bs, sizeof(struct fat32_boot_sector));
-
-    // decide what info need later
-    // size in sector
-    fat32_meta.sec_size.reserved_sectors = bs->n_reserved_sectors;
-    fat32_meta.sec_size.FAT_region = bs->n_FATs * bs->sectors_per_FAT;
-    fat32_meta.sec_size.clus_size_byte = bs->bytes_per_logical_sector * bs->logical_sector_per_cluster;
-    
-    // sector begin
-    fat32_meta.sec_beg.reserved_sectors = parti_blk_idx;
-    fat32_meta.sec_beg.FAT_region = fat32_meta.sec_beg.reserved_sectors + fat32_meta.sec_size.reserved_sectors;
-    fat32_meta.sec_beg.data_region = fat32_meta.sec_beg.FAT_region + fat32_meta.sec_size.FAT_region;
-    fat32_meta.sec_beg.root_dir_entry
-        = fat32_meta.sec_beg.data_region;
-
-
-    // 3. Get the root directory cluster number and create it’s root directory object.    
-    int ret;
-    ret = vfs_mkdir("/boot");               // /boot is TA's spec
-    ret = vfs_mount("/boot", "fat32");
-    // file_t *boot_dir;
-    // vfs_open("/boot", O_CREAT, &boot_dir);
-    // struct fat32_inter =  boot_dir->vnode->internal;
-
-    return ret;
-}
-
-
-/*
-    uint32_t FAT_blk_count = fat32_meta.sec_size.FAT_region;
-    uint32_t FAT_entry_count =  BLOCK_SIZE / sizeof(uint32_t);
-    uint32_t FAT_total_entry_count = FAT_blk_count * FAT_entry_count;
-    uint32_t *FAT = (uint32_t *)kmalloc(fat32_meta.sec_size.FAT_region * bs->bytes_per_logical_sector);
-    // uint32_t FAT[fat32_meta.sec_size.FAT_region * bs->bytes_per_logical_sector / sizeof(uint32_t)];
-    // uint32_t FAT[FAT_toal_entry_count];
-
-    // load the whole FAT into local variable FAT
-    uint32_t blk_idx = 0;
-    while (blk_idx < FAT_blk_count)
-    {
-        sd_read_block(fat32_meta.sec_beg.FAT_region + blk_idx, FAT + blk_idx * BLOCK_SIZE / sizeof(uint32_t));
-        blk_idx++;
-        uart_put_int(blk_idx);
-    }
-    uart_puts("\nOK~~~\n");
-    blk_idx = 0;
-
-    // int32_t seen[FAT_total_entry_count];
-    int32_t *seen = (int32_t *)kmalloc(FAT_total_entry_count);
-    // uint32_t clus_sets[FAT_total_entry_count];
-    uint32_t *clus_sets = (uint32_t *)kmalloc(FAT_total_entry_count);
-    uint32_t clus_idx = 0;
-
-    // special entries (the first two entries in whole FAT region)
-    uint32_t EOCCM = *(FAT + 1); // end of cluster chain marker
-    
-    // // skip special entry
-    // uint32_t entry_idx = 2;                                 
-    uint32_t seen_idx = 2;                                 
-    seen[0] = seen[1] = -1;                                 // -1 means the extry have seen
- 
-    uint32_t cur_entry = 2;                                 // skip special entry
-    uint32_t next_entry;
-    uint32_t count = 0;
-    // while (seen_idx < FAT_total_entry_count)
-    while (count < FAT_total_entry_count)
-    {
-        count++;
-        // uart_put_int(seen_idx);
-        // uart_puts(" ");
-        //ret = vfs_open((const char *)dir_entry->name, "fat32");
-
-        if (cur_entry == EOCCM || cur_entry == EOC)
-        {
-            clus_sets[clus_idx++] = 0;    // use 0 as delimiter between file's clusters
-            
-            // find unseen clus num
-            while (seen[seen_idx] == -1 || *(FAT + seen_idx) == 0)
-            {
-                seen_idx++;
-            }
-            next_entry = seen_idx;         
-        }
-        else if (cur_entry != 0)
-        {
-            seen[cur_entry] = -1;
-            next_entry = *(FAT + cur_entry);
-            
-            clus_sets[clus_idx++] = cur_entry;
-            // clusters_size++;
-        }
-        cur_entry = next_entry;
-    }
-*/
 
 
 

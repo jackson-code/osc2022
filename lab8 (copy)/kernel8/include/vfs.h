@@ -87,7 +87,7 @@ typedef struct vnode_operations {
 struct mount* rootfs;
 
 void rootfs_init();
-int register_filesystem(struct filesystem* fs);
+int register_filesystem(char *fs_name);
 int vfs_mount(const char* target, const char* filesystem);
 int vfs_chdir(const char *pathname);
 int vfs_mknod(const char *pathname, enum dev_type dev);
@@ -113,12 +113,11 @@ int vfs_create(vnode_t* dir_node, vnode_t** v_tar, const char* component_name);
 
 typedef struct internal_tmpfs {
    char *file_content;
-    // char buf[TMPFS_MAX_FILE_SIZE];
 }inter_tmpfs_t;
 
 
 int tmpfs_register();
-int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs);
+int tmpfs_setup_mount(filesystem_t *tmpfs, struct mount *rootfs);
 vnode_t *tmpfs_create_vnode(const char *name, vnode_t *parent, enum vnode_type type);
 //---------- file operation ----------//
 int tmpfs_write(file_t* file, const void* buf, unsigned long len);
@@ -184,7 +183,7 @@ struct framebuffer_info {
     unsigned int isrgb;
 	unsigned char *lfb;                       /* raw frame buffer address */
 };
-void sf_init();
+void special_file_init();
 int sf_fb_mknod(vnode_t *dev);
 int sf_fb_register();
 void sf_mailbox_init_framebuffer(vnode_t *fb_node);

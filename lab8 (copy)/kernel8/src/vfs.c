@@ -10,8 +10,16 @@
 #include "mailbox.h"
 #include "fat32.h"
 
+filesystem_t tmpfs;
+file_op_t *tmpfs_f_op;
+vnode_op_t *tmpfs_v_op;
+
+filesystem_t initramfs;
 file_op_t *initramfs_f_op;
 vnode_op_t *initramfs_v_op;
+
+extern filesystem_t fat32;
+
 
 //----------------------------------------------------------//
 //                     virtual file system                  //
@@ -22,33 +30,28 @@ vnode_op_t *initramfs_v_op;
 void rootfs_init() {
 	uart_puts("rootfs_init begin\n");
 
-    filesystem_t *tmpfs = (filesystem_t *)kmalloc(sizeof(filesystem_t *));
-    tmpfs = (filesystem_t *)kmalloc(sizeof(filesystem_t));
-    tmpfs->name = "tmpfs";
-    tmpfs->setup_mount = tmpfs_set_mountup;
-
     // register tmpfs
-    register_filesystem(tmpfs);
+    register_filesystem("tmpfs");
 
     // mount up tmpfs
-    rootfs = (struct mount *)kmalloc(sizeof(struct mount *));
-    tmpfs->setup_mount(tmpfs, rootfs);
+    rootfs = (struct mount *)kmalloc(sizeof(struct mount));
+    tmpfs.setup_mount(&tmpfs, rootfs);
 
 	uart_puts("rootfs_init finish\n");
 }
 
-int register_filesystem(struct filesystem* fs) {
+int register_filesystem(char *fs_name) {
     // register the file system to the kernel.
     // you can also initialize memory pool of the file system here.
-    if (!str_cmp("tmpfs", fs->name))
+    if (!str_cmp("tmpfs", fs_name))
     {
         return tmpfs_register();
     }
-    if (!str_cmp("initramfs", fs->name))
+    else if (!str_cmp("initramfs", fs_name))
     {
         return initramfs_register();
     }
-    if (!str_cmp("fat32", fs->name))
+    else if (!str_cmp("fat32", fs_name))
     {
         return fat32_register();
     }
@@ -78,14 +81,6 @@ int vfs_traversal(const char* target, vnode_t *dir_node, vnode_t **v_tar) {
 int vfs_mount(const char* target, const char* filesystem) {
 	uart_puts("vfs_mount begin\n");
 
-    filesystem_t *fs = (filesystem_t *)kmalloc(sizeof(filesystem_t *));
-    fs = (filesystem_t *)kmalloc(sizeof(filesystem_t));
-    fs->name = filesystem;
-    // fs->set_mountup
-
-    // register fs
-    register_filesystem(fs);
-
     // find target vnode
     int ret;
     vnode_t *v_tar; 
@@ -100,23 +95,28 @@ int vfs_mount(const char* target, const char* filesystem) {
         ret = vfs_traversal(target, rootfs->root, &v_tar);
         if (ret != 0)
             uart_puts("\tERROR in vfs_traversal(): can't find target vnode\n");
+    }  
+
+    // find filesystem
+    filesystem_t *fs;
+    if (!str_cmp("tmpfs", filesystem)) {
+        fs = &tmpfs;
+    } else if (!str_cmp("initramfs", filesystem)) {
+        fs = &initramfs;
+    } else if (!str_cmp("fat32", filesystem)) {
+        fs = &fat32;
+    } else {
+        uart_puts("ERROR in vfs_mount(): unsupport filesystem\n");
+        return -1;
     }
-    
-    // mount up fs
+
     struct mount *mount_fs = (struct mount *)kmalloc(sizeof(struct mount));
     mount_fs->fs = fs;
     mount_fs->root = v_tar;
-    v_tar->mount = mount_fs;
+    v_tar->mount = mount_fs;    
 
-    // register method
-    // register tmpfs's method by default
-    if (!str_cmp("initramfs", filesystem))
-    {
-        v_tar->f_ops = initramfs_f_op;
-        v_tar->v_ops = initramfs_v_op;
-        initramfs_setup_mount(fs, mount_fs);
-    }
-    
+    // mount up fs
+    fs->setup_mount(fs, mount_fs);
 
 	uart_puts("vfs_mount finish\n");
     return ret;
@@ -185,8 +185,8 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
     str_token(pathname, comp_names, '/');
     char *file_name = comp_names[comp_count - 1];
 
-    vnode_t *node;          // will be directory/file vnode
     // 1. Lookup pathname
+    vnode_t *node;          // will be directory/file vnode
     int ret = vfs_lookup(pathname, &node);
 
     // special file
@@ -196,19 +196,11 @@ int vfs_open(const char* pathname, int flags, file_t** file_tar) {
         return 0;
     }      
 
-    // ret > 0 means fat32's file
-    // not sure should handle fat32 in if or else below
-
     // 2. Create a new file handle for this vnode if found.
     if (ret == 0 && node->type == REGULAR_FILE)
     {
         return node->f_ops->open(node, file_tar);
     } 
-    // fat32 always be handle here
-    else if (ret > 0)
-    {
-        return node->f_ops->open(node, file_tar);
-    }
     else
     // 3. Create a new file(and vnode) if O_CREAT is specified in flags and vnode not found
     // lookup error code shows if file exist or not or other error occurs
@@ -373,10 +365,10 @@ int vfs_create(vnode_t* dir_node, vnode_t** file_node, const char* component_nam
 //----------------------------------------------------------//
 //                         tmpfs                            //
 //----------------------------------------------------------//
-file_op_t *tmpfs_f_op;
-vnode_op_t *tmpfs_v_op;
-
 int tmpfs_register() {
+    tmpfs.name = "tmpfs";
+    tmpfs.setup_mount = tmpfs_setup_mount;
+
     tmpfs_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
     tmpfs_f_op->open = tmpfs_open;
     tmpfs_f_op->close = tmpfs_close;
@@ -392,7 +384,7 @@ int tmpfs_register() {
 }
 
 // create root vnode & dentry
-int tmpfs_set_mountup(filesystem_t *tmpfs, struct mount *rootfs) {
+int tmpfs_setup_mount(filesystem_t *tmpfs, struct mount *rootfs) {
     rootfs->fs = tmpfs;
     rootfs->root = tmpfs_create_vnode("/", 0, DIRECTORY);
     return 0;
@@ -464,7 +456,6 @@ int tmpfs_create_file(vnode_t* file_node, file_t** target) {
     else
     {
         *target = file_node->file;
-        //(*target)->status = FILE_EXIST;
         uart_puts("\tWARNING tmpfs_create_file(): file existing\n");
         return 0;
     }
@@ -578,10 +569,17 @@ int tmpfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name)
 //----------------------------------------------------------//
 void initramfs_init() {
     vfs_mkdir("/initramfs");
+
+    // register fs
+    register_filesystem("initramfs");
+
 	vfs_mount("/initramfs", "initramfs");    
  }
 
 int initramfs_register() {
+    initramfs.name = "initramfs";
+    initramfs.setup_mount = initramfs_setup_mount;
+
     initramfs_f_op = (file_op_t *)kmalloc(sizeof(file_op_t));
     initramfs_f_op->open = initramfs_open;
     initramfs_f_op->close = initramfs_close;
@@ -782,7 +780,7 @@ int initramfs_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_n
 file_op_t *uart_f_op;
 vnode_op_t *uart_v_op;
 
-void sf_init()
+void special_file_init()
 {
     vfs_mkdir("/dev");
 	vfs_mknod("/dev/uart", UART); 
@@ -837,23 +835,23 @@ int sf_uart_register() {
 }
 
 int sf_uart_open(vnode_t* file_node, file_t** target) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_close(file_t* file) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_create(vnode_t* dir_node, vnode_t** file_node, const char* file_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_lookup(vnode_t* dir_node, vnode_t** v_tar, const char* component_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_mkdir(vnode_t* dir_node, vnode_t** target, const char* component_name) {
-    return -1;
+    return 0;
 }
 
 int sf_uart_write(file_t* file, const void* buf, unsigned long len) {

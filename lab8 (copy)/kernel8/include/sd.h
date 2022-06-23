@@ -70,28 +70,4 @@ void sd_init();
 void sd_read_block(int block_idx, void* buf);
 void sd_write_block(int block_idx, void* buf);
 
-int sd_mount_fat32();
-
-//-------------------------------------------------//
-//               classic generic MBR               //
-//-------------------------------------------------//
-#define MBR_SIZE                (512)
-#define BOOTSTRAP_CODE_SIZE     (446)
-
-struct mbr_partition_entry {
-    uint8_t status_flag;                // 0x0
-    uint8_t partition_beg_head;         // 0x1
-    uint8_t partition_beg_sector;       // 0x2
-    uint8_t partition_beg_cylinder;     // 0x3
-    uint8_t partition_type;             // 0x4
-    uint8_t partition_end_head;         // 0x5
-    uint8_t partition_end_sector;       // 0x6
-    uint8_t partition_end_cylinder;     // 0x7
-    uint8_t sector_beg;            // 0x8-0xB
-    uint8_t number_of_sector;           // 0xC-0xF
-};
-
-void read_classical_generic_MBR(char *mbr);
-
-
 #endif
