@@ -4,6 +4,7 @@
 
 #include "typedef.h"
 #include "vfs.h"
+#include "list.h"
 
 #define BLOCK_SIZE          (512)                       // TA's spec assign
 #define FAT_ENTRY_PER_BLOCK (BLOCK_SIZE / sizeof(int))
@@ -102,12 +103,34 @@ struct fat32_sector_beg {
     uint32_t root_dir_entry;
 };
 
+typedef struct FAT_cache
+{
+    uint32_t table_idx;
+    uint32_t blk_idx;
+    uint32_t FAT[BLOCK_SIZE / sizeof(uint32_t)];
+    struct list_head siblings;    // child of parent list
+} FAT_cache_t;
+
+typedef struct dir_table_cache
+{
+    // struct fat32_dir_entry *dir_table;
+    char dir_table[BLOCK_SIZE];
+    uint32_t blk_idx;
+    struct list_head siblings;    // child of parent list
+} dir_table_cache_t;
+
+
 struct fat32_meta {
     struct fat32_layout_size sec_size;
     struct fat32_sector_beg sec_beg;
     uint32_t first_clus;
     uint32_t eoccm;                         // end of cluster chain marker
     vnode_t *root;
+
+    // cache
+    struct FAT_cache *FAT_cache;
+    struct dir_table_cache* dir_table_cache;
+
 };
 
 enum cache_status {
@@ -121,21 +144,19 @@ typedef struct fat32_internal {
     // uint32_t dirent_cluster;
     // uint32_t size;
 
-    // cache for meta data
-    uint32_t *FAT;
-    uint32_t FAT_blk_idx;
-    struct fat32_dir_entry *dir_table;
-    uint32_t dir_table_blk_idx;
-    enum cache_status status;
     // cache for file content
-    // char *file_content;
-    struct file_cache *file_cache; 
+    char *file_content;
+    enum cache_status file_status;
+    uint32_t file_blk_idx;
 }inter_fat32_t;
 
+
+
+
 struct file_cache {
-    char *content;
-    enum cache_status status;
-    uint32_t blk_idx;
+    char *file_content;
+    enum cache_status file_status;
+    uint32_t file_blk_idx;
     // uint32_t size;
 };
 

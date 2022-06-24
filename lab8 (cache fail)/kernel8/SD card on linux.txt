@@ -1,0 +1,11 @@
+1. install kpartx
+		sudo apt-get update -y
+		sudo apt-get install -y kpartx
+		
+2.
+		sudo kpartx -av sfn_nctuos.img
+		(it will show the loopXXX, which is used next cmd)
+		sudo mount -t msdos /dev/mapper/<loopXXX> ./<dir>
+		
+3. add txt (test file) 
+		sudo cp -b ./FAT_R.txt ./sdcard
